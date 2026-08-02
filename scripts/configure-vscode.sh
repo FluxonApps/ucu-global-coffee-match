@@ -27,7 +27,8 @@ echo "VSCode settings configured successfully ☄️"
 
 # Common recommended extensions
 code --install-extension oxc.oxc-vscode
-code --install-extension charliermarsh.ruff
 code --install-extension bradlc.vscode-tailwindcss
+code --install-extension ms-python.python
+code --install-extension charliermarsh.ruff
 
 echo "Recommended VSCode extensions installed! 🐸"

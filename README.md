@@ -36,6 +36,8 @@ Initial steps you might have already done during your study at UCU:
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
 
+- Install Docker Desktop (used to run the local Postgres database): https://www.docker.com/products/docker-desktop/. After installing, make sure Docker Desktop is running before you start the backend.
+
 Now, let's set up your machine for real development 👇
 
 1. Clone this Git repository:
@@ -66,21 +68,41 @@ cd frontend
 npm install
 ```
 
-4. Start the project!
+4. Install backend dependencies using uv, then go back to the repo root.
 
 ```shell
-npm run dev
+cd backend
+uv sync
+cp .env.example .env
+cd ..
 ```
 
-5. Go to http://localhost:5173/ to see the web app live!
+5. Start the project! This project has three parts that need to run at the same time - the database, the backend, and the frontend.
 
-6. Open the project in VSCode (if haven't yet)
+```shell
+# Start database. Only needs to be ran once.
+make db
+
+# Starts Python backend server.
+make backend
+
+# Starts React frontend on http://localhost:5173.
+make frontend
+```
+
+`make db` only needs to be re-run if Docker isn't already running the database container - it's
+safe to run again any time, it won't wipe your data. If you ever want to wipe the database and
+start fresh with seed data, run `make db-clear`. To stop the database, run `make db-stop`.
+
+6. Go to http://localhost:5173/ to see the web app live!
+
+7. Open the project in VSCode (if haven't yet)
 
 ```shell
 code .
 ```
 
-7. You should be all set! Now you can start contributing to the project! 🤘
+8. You should be all set! Now you can start contributing to the project! 🤘
 
 ## Deployment
 
@@ -102,7 +124,7 @@ JavaScript: https://www.geeksforgeeks.org/introduction-to-javascript/, https://d
 
 React.js: official guide https://react.dev/learn, short hints https://devhints.io/react.
 
-Firebase: official guide https://firebase.google.com/docs/web/setup.
+FastAPI: official tutorial https://fastapi.tiangolo.com/tutorial/.
 
 Git: cheat sheet https://training.github.com/downloads/github-git-cheat-sheet.pdf.
 

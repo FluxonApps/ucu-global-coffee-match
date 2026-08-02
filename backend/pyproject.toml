@@ -1,0 +1,29 @@
+[project]
+name = "global-coffee-match-backend"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+  "bcrypt>=5.0.0",
+  "fastapi>=0.141.1",
+  "psycopg[binary]>=3.3.4",
+  "pydantic-settings>=2.14.2",
+  "pydantic[email]>=2.13.4",
+  "python-dotenv>=1.2.2",
+  "uvicorn[standard]>=0.52.1",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.16.1"]
+
+[tool.ruff]
+line-length = 120
+indent-width = 2
+
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Cookie"]
