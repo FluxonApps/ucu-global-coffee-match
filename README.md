@@ -1,6 +1,12 @@
 # Global Coffee Match `☕️🌍`
 
-_UCU x Fluxon Summer School 2026_
+Welcome to the Fluxon x UCU Summer School 2026! 👋👋👋
+
+This is a Bootcamp project template. It contains minimal web app setup and doesn't contain anything related to your actual project. You are going to be building your app on top of this template. Thus, please change anything in this repository at your will in order to build your cool project! Start with this README - replace this with your project's title and description!
+
+Overall, this README file is here to help you understand what we're dealing with, set up your machine for development, and provide some useful materials for learning web technologies.
+
+🚧🚧🚧 Make sure to change this file to make it yours! 🚧🚧🚧
 
 ## Development
 
