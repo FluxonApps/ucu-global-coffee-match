@@ -14,7 +14,7 @@ Before starting your work on this project, we need to do a couple of steps to se
 
 This list will help you set up your machine for local development.
 
-### Pre-requisites
+### Local setup
 
 Initial steps you might have already done during your study at UCU:
 
@@ -35,8 +35,6 @@ Initial steps you might have already done during your study at UCU:
   ```shell
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
-
-### Local development setup
 
 Now, let's set up your machine for real development 👇
 
@@ -83,3 +81,33 @@ code .
 ```
 
 7. You should be all set! Now you can start contributing to the project! 🤘
+
+## Deployment
+
+Hey, some of you might be interested in setting up the deployment of your team's app 👀🚀
+
+You could do this manually, or via an automated GitHub Actions workflow. Just ask your mentor!
+
+## Useful Materials
+
+> Before you proceed with this section, **REMEMBER THERE ARE NO STUPID OR LAME QUESTIONS**. If you're feeling like you don't know something, this means there's room for improvement – so just say it out loud and your mentor or peers will help you! We're all here to learn something new ([even mentors!](https://github.com/user-attachments/assets/c0c34e3a-8c5b-4bd8-9a8e-41c66bacece5)), so let's actually have a great time together!!!
+
+> No, seriously, if there's anything, no matter however "obvious" this thing feels to you, don't be shy asking about it. Otherwise we'll be sad a question died never seeing the world 🥀🥀🥀
+
+Some useful links for learning stuff we're dealing with at Bootcamp:
+
+Web basics, https://internetingishard.netlify.app/ - a GREAT website that can help you better understand HTML & CSS.
+
+JavaScript: https://www.geeksforgeeks.org/introduction-to-javascript/, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction, ask mentor for more.
+
+React.js: official guide https://react.dev/learn, short hints https://devhints.io/react.
+
+Firebase: official guide https://firebase.google.com/docs/web/setup.
+
+Git: cheat sheet https://training.github.com/downloads/github-git-cheat-sheet.pdf.
+
+TailwindCSS: official documentation https://tailwindcss.com/docs/styling-with-utility-classes.
+
+The above list is incomplete, so if you need anything - you know [whom](https://github.com/FluxonApps/ucu-summer-school-project-template/assets/86969397/f93ff07b-f70e-476d-9ed5-14f25d474a53) to ask 😊
+
+**Good luck!**
