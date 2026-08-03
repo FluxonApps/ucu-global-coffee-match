@@ -10,6 +10,8 @@ Overall, this README file is here to help you understand what we're dealing with
 
 ## Running the app
 
+This should be ran in different terminals. One terminal for db, one for backend, and one for the frontend.
+
 To run and initialize the database:
 
 ```
