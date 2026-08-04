@@ -1,6 +1,8 @@
+import secrets
+import string
 import psycopg
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 
 from app.auth import (
     CurrentUser,
@@ -15,9 +17,24 @@ from app.db import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def generate_unique_user_code(conn: psycopg.Connection) -> str:
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        # Generate 16 random symbols
+        code = "".join(secrets.choice(alphabet) for _ in range(16))
+
+        # Checking if code already is
+        exists = conn.execute(
+            "SELECT 1 FROM users WHERE user_code = %s", (code,)
+        ).fetchone()
+
+        if not exists:
+            return code
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=6)
+    password: str
     name: str | None = None
 
 
@@ -32,13 +49,15 @@ def register(body: RegisterRequest, response: Response, conn: psycopg.Connection
     if existing:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
+    user_code = generate_unique_user_code(conn)
+
     row = conn.execute(
         """
-        INSERT INTO users (email, password_hash, name)
-        VALUES (%s, %s, %s)
-        RETURNING id, email, name, team, timezone
+        INSERT INTO users (email, password_hash, name, user_code)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id, user_code, email, name, team, timezone
         """,
-        (body.email, hash_password(body.password), body.name),
+        (body.email, hash_password(body.password), body.name, user_code),
     ).fetchone()
     conn.commit()
 
@@ -50,7 +69,7 @@ def register(body: RegisterRequest, response: Response, conn: psycopg.Connection
 @router.post("/login")
 def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
     row = conn.execute(
-        "SELECT id, email, password_hash, name, team, timezone FROM users WHERE email = %s",
+        "SELECT id, user_code, email, password_hash, name, team, timezone FROM users WHERE email = %s",
         (body.email,),
     ).fetchone()
 

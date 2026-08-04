@@ -1,4 +1,5 @@
 INSERT INTO users (
+  user_code,
   first_name,
   last_name,
   email,
@@ -8,13 +9,13 @@ INSERT INTO users (
   department,
   timezone,
   bio,
-  slack_handle,
   personal_interests,
   conversation_topics,
   skills,
   languages
 ) VALUES
 (
+  'aX9kL2mP8qR4vW1z',
   'Alex',
   'Chen',
   'alex@company.com',
@@ -24,13 +25,13 @@ INSERT INTO users (
   'Design',
   'Europe/Kyiv',
   'Passionate about UI/UX and web technologies. Always open for a coffee chat!',
-  '@alex_chen',
   ARRAY['Coffee', 'Photography', 'Reading', 'Music'],
   ARRAY['Product Strategy', 'Design-Engineering Collaboration', 'Remote Work'],
   ARRAY['Figma', 'UX Research', 'Prototyping', 'Design Systems'],
   ARRAY['English', 'Ukrainian']
 ),
 (
+  'bY0mL3nQ9sS5wX2a',
   'Matfhei',
   'Ov',
   'matfheiwovubdjs@gmail.com',
@@ -40,7 +41,6 @@ INSERT INTO users (
   'Engineering',
   'Europe/Kyiv',
   'Love building backends and exploring new frameworks.',
-  '@matfhei',
   ARRAY['Coffee', 'Gaming', 'Open Source'],
   ARRAY['Engineering Culture', 'Cross-team Collaboration'],
   ARRAY['Python', 'FastAPI', 'PostgreSQL', 'Docker'],

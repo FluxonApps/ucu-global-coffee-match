@@ -1,7 +1,8 @@
-
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
+
   --Registration
+  user_code VARCHAR(16) UNIQUE NOT NULL
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
@@ -13,7 +14,6 @@ CREATE TABLE IF NOT EXISTS users (
   department TEXT,                      -- Department (drop-down)
   timezone TEXT,                        -- Timezone (drop-down)
   bio TEXT,                             -- Bio (короткий опис про себе)
-  slack_handle TEXT,                    -- Slack handle (напр. "@alex_chen")
 
   -- Interests
   personal_interests TEXT[] DEFAULT '{}', -- Personal Interests (Coffee, Hiking, Music...)
@@ -21,12 +21,24 @@ CREATE TABLE IF NOT EXISTS users (
   skills TEXT[] DEFAULT '{}',             -- Skills (Figma, React, Python...)
   languages TEXT[] DEFAULT '{}',          -- Languages (English, Ukrainian...)
 
+  slack_user_id TEXT,
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS matches (
+  id SERIAL PRIMARY KEY,
+  user1_id INT REFERENCES users(id) ON DELETE CASCADE,
+  user2_id INT REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'created',
+
+  matched_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
