@@ -1,12 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --font-size: 16px;
+  --background: #f7f5ee;
+  --foreground: #3e2723;
+  --card: #ffffff;
+  --card-foreground: #3e2723;
+  --popover: #ffffff;
+  --popover-foreground: #3e2723;
+  --primary: #76845b;
+  --primary-foreground: #ffffff;
+  --secondary: #d8d3b3;
+  --secondary-foreground: #3e2723;
+  --muted: #ede9dc;
+  --muted-foreground: #7a7060;
+  --accent: #d8d3b3;
+  --accent-foreground: #3e2723;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --border: rgba(62, 39, 35, 0.12);
+  --input: transparent;
+  --input-background: #f0ede4;
+  --switch-background: #b1b7be;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #76845b;
+  --radius: 0.75rem;
+}
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color-scheme: light;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,9 +76,17 @@
 
 body,
 #root {
-  height: 100vh;
+  min-height: 100vh;
 }
 
 button:not(:disabled) {
   cursor: pointer;
+}
+
+.font-display {
+  font-family: 'Instrument Serif', serif;
+}
+
+.font-mono {
+  font-family: 'DM Mono', monospace;
 }
