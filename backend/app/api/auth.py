@@ -32,43 +32,41 @@ def register(
     response: Response,
     conn: psycopg.Connection = Depends(get_db),
 ):
-    existing = conn.execute(
-        "SELECT id FROM users WHERE email = %s", (body.email,)
-    ).fetchone()
-    if existing:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
+  existing = conn.execute(
+      "SELECT id FROM users WHERE email = %s", (body.email,)
+  ).fetchone()
+  if existing:
+      raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
-    row = conn.execute(
-        """
-    INSERT INTO users (email, password_hash, name)
-    VALUES (%s, %s, %s)
-    RETURNING id, email, name, team, timezone
+  row = conn.execute(
+    """
+    INSERT INTO users (email, password_hash, first_name, last_name)
+    VALUES (%s, %s, %s, %s)
+    RETURNING id, email, first_name, last_name, timezone
     """,
-        (body.email, hash_password(body.password), body.name),
-    ).fetchone()
-    conn.commit()
+    (body.email, hash_password(body.password), body.name, body.name),
+  ).fetchone()
+  conn.commit()
 
-    token, expires_at = create_session(conn, row["id"])
-    set_session_cookie(response, token, expires_at)
-    return row
+  token, expires_at = create_session(conn, row["id"])
+  set_session_cookie(response, token, expires_at)
+  return row
 
 
 @router.post("/login")
-def login(
-    body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)
-):
-    row = conn.execute(
-        "SELECT id, email, password_hash, name, team, timezone FROM users WHERE email = %s",
-        (body.email,),
-    ).fetchone()
+def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
+  row = conn.execute(
+    "SELECT id, email, password_hash, first_name, timezone FROM users WHERE email = %s",
+    (body.email,),
+  ).fetchone()
 
-    if row is None or not verify_password(body.password, row["password_hash"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+  if row is None or not verify_password(body.password, row["password_hash"]):
+      raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
-    token, expires_at = create_session(conn, row["id"])
-    set_session_cookie(response, token, expires_at)
-    del row["password_hash"]
-    return row
+  token, expires_at = create_session(conn, row["id"])
+  set_session_cookie(response, token, expires_at)
+  del row["password_hash"]
+  return row
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
