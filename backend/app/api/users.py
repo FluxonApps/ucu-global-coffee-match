@@ -12,6 +12,7 @@ class UpdateProfileRequest(BaseModel):
   first_name: str | None = None
   last_name: str | None = None
   timezone: str | None = None
+  personal_interests: list[str] | None = None
 
 
 @router.get("/me")

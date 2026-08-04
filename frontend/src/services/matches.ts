@@ -12,10 +12,10 @@
 
 import { COLLEAGUES, MOCK_MATCHES } from '../data/mockMatches.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
+import { apiFetch } from '../lib/api.ts';
 
 export async function getMatches(): Promise<Match[]> {
-  // TODO(backend): GET /matches
-  return MOCK_MATCHES;
+  return apiFetch<Match[]>('/matches');
 }
 
 export async function getColleague(id: string): Promise<Colleague | undefined> {

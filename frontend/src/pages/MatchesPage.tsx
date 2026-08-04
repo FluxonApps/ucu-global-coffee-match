@@ -35,7 +35,6 @@ const MatchesPage = () => {
   try {
     await apiFetch('/matches/create', {
       method: 'POST',
-      body: JSON.stringify({ user_id: user.id }),
     });
 
     // Reload the list so the newly created match appears.

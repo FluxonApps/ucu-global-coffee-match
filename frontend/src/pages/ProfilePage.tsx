@@ -177,6 +177,7 @@ const ProfilePage = () => {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         timezone,
+        personal_interests: local.interests,
       });
 
       setDetails(local);

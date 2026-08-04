@@ -7,6 +7,8 @@ from app.matching.history import get_past_matches, save_matches
 
 from app.matching.similarity import score
 
+from app.auth import CurrentUser
+
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -49,28 +51,21 @@ def store_match(user, best_user, conn):
     return {"user1_id": user["id"], "user2_id": best_user["id"]}
 
 
-class MatchCreateRequest(BaseModel):
-    user_id: int
-
-
 @router.post("/create")
-def create_match(body: MatchCreateRequest, conn: psycopg.Connection = Depends(get_db)):
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users;")
-        all_users = cur.fetchall()
+def create_match(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    all_users = conn.execute("SELECT * FROM users").fetchall()
 
-    user = next((u for u in all_users if u["id"] == body.user_id), None)
+    db_user = next((item for item in all_users if item["id"] == user["id"]), None)
 
-    if user is None:
+    if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    best_user = find_match(conn, user, all_users)
+    best_user = find_match(conn, db_user, all_users)
 
     if best_user is None:
-        raise HTTPException(
-            status_code=409,
-            detail="No available match found for this user",
-        )
+        raise HTTPException(status_code=409, detail="No available match found")
 
-    match = store_match(user, best_user, conn)
-    return {"match": match}
+    return {"match": store_match(db_user, best_user, conn)}
