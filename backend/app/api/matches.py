@@ -53,39 +53,22 @@ class MatchCreateRequest(BaseModel):
 
 @router.post("/create")
 def create_match(body: MatchCreateRequest, conn: psycopg.Connection = Depends(get_db)):
-    user_id = body.user_id
-
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM users;")
         all_users = cur.fetchall()
 
-    user = next((u for u in all_users if u.id == user_id), None)
+    user = next((u for u in all_users if u["id"] == body.user_id), None)
 
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-
-    candidates = [u for u in all_users if u['id'] != user_id]
-
-    best_user = find_match(conn, user, all_users)
-
-    user_id = body.user_id
-
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users;")
-        all_users = cur.fetchall()
-
-    user = next((u for u in all_users if u.id == user_id), None)
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    candidates = [u for u in all_users if u["id"] != user_id]
 
     best_user = find_match(conn, user, all_users)
 
     if best_user is None:
-        raise HTTPException(status_code=409, detail="No available match found for this user")
+        raise HTTPException(
+            status_code=409,
+            detail="No available match found for this user",
+        )
 
-    match = store_match(user, best_user, conn)  # saved match form the database
-
+    match = store_match(user, best_user, conn)
     return {"match": match}
