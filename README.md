@@ -8,6 +8,30 @@ Overall, this README file is here to help you understand what we're dealing with
 
 🚧🚧🚧 Make sure to change this file to make it yours! 🚧🚧🚧
 
+## Running the app
+
+This should be ran in different terminals. One terminal for db, one for backend, and one for the frontend.
+
+To run and initialize the database:
+
+```
+docker compose up -d
+# Then
+cd backend && uv run python -m app.scripts.init_db
+```
+
+To run frontend, run:
+
+```
+cd frontend && npm run dev
+```
+
+To run backend, run:
+
+```
+cd backend && uv run uvicorn app.main:app --reload
+```
+
 ## Development
 
 Before starting your work on this project, we need to do a couple of steps to set up your tooling.
