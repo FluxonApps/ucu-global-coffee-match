@@ -1,12 +1,26 @@
--- AUTHENTICATION
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
+  --Registration
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  name TEXT,
-  team TEXT,
-  timezone TEXT,
+
+  -- Profile
+  avatar_url TEXT DEFAULT '/static/avatars/default.png',
+  role_title TEXT,                      -- Role / Title (напр. "Senior Product Designer")
+  department TEXT,                      -- Department (drop-down)
+  timezone TEXT,                        -- Timezone (drop-down)
+  bio TEXT,                             -- Bio (короткий опис про себе)
+  slack_handle TEXT,                    -- Slack handle (напр. "@alex_chen")
+
+  -- Interests
+  personal_interests TEXT[] DEFAULT '{}', -- Personal Interests (Coffee, Hiking, Music...)
+  conversation_topics TEXT[] DEFAULT '{}',-- Conversation Topics (Career Growth, Remote Work...)
+  skills TEXT[] DEFAULT '{}',             -- Skills (Figma, React, Python...)
+  languages TEXT[] DEFAULT '{}',          -- Languages (English, Ukrainian...)
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
