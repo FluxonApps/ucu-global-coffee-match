@@ -9,8 +9,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 class UpdateProfileRequest(BaseModel):
-  name: str | None = None
-  team: str | None = None
+  first_name: str | None = None
+  last_name: str | None = None
   timezone: str | None = None
 
 
@@ -31,7 +31,7 @@ def update_profile(
 
   set_clause = ", ".join(f"{key} = %s" for key in fields)
   row = conn.execute(
-    f"UPDATE users SET {set_clause} WHERE id = %s RETURNING id, email, name, team, timezone",
+    f"UPDATE users SET {set_clause} WHERE id = %s RETURNING id, email, first_name, last_name, timezone",
     (*fields.values(), user["id"]),
   ).fetchone()
   conn.commit()
