@@ -38,7 +38,6 @@ def create_match(body: MatchCreateRequest, conn: psycopg.Connection = Depends(ge
         raise HTTPException(status_code=404, detail="User not found")
     
     candidates = [u for u in all_users if u["id"] != user_id]
-
     best_user = find_match(user, candidates, conn)
 
     if best_user is None:

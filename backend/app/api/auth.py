@@ -32,6 +32,9 @@ def register(
   response: Response,
   conn: psycopg.Connection = Depends(get_db),
 ):
+  name = body.name.strip() if body.name else ""
+  first_name, _, last_name = name.partition(" ")
+
   existing = conn.execute("SELECT id FROM users WHERE email = %s", (body.email,)).fetchone()
   if existing:
     raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
@@ -42,7 +45,7 @@ def register(
     VALUES (%s, %s, %s, %s)
     RETURNING id, email, first_name, last_name, timezone
     """,
-    (body.email, hash_password(body.password), body.name, body.name),
+    (body.email, hash_password(body.password), first_name, last_name),
   ).fetchone()
   conn.commit()
 
@@ -54,7 +57,7 @@ def register(
 @router.post("/login")
 def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
   row = conn.execute(
-    "SELECT id, email, password_hash, first_name, timezone FROM users WHERE email = %s",
+    "SELECT id, email, password_hash, first_name, last_name, timezone FROM users WHERE email = %s",
     (body.email,),
   ).fetchone()
 
