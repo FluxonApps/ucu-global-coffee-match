@@ -9,9 +9,12 @@ import Card from '../components/ui/Card.tsx';
 import { FormInput, MultiSelect } from '../components/ui/FormInput.tsx';
 import { useAuth } from '../context/useAuth.ts';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { INTEREST_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, TIMEZONE_OPTIONS, TOPIC_OPTIONS } from '../data/options.ts';
+import { DEPARTMENT_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, TIMEZONE_OPTIONS, TOPIC_OPTIONS } from '../data/options.ts';
 import { ApiError } from '../lib/api.ts';
 import type { ProfileDetails } from '../types/coffeeMatch.ts';
+
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from '../lib/firebase.ts';
 
 type MultiField = 'skills' | 'interests' | 'languages' | 'topics' | 'format';
 
@@ -21,8 +24,8 @@ const ProfilePage = () => {
   const navigate = useNavigate();
 
   // Fields backed by the real API.
-  const [firstName, setFirstName] = useState(user?.first_name ?? '');
-  const [lastName, setLastName] = useState(user?.last_name ?? '');
+  const [name, setName] = useState(user?.name ?? '');
+  const [team, setTeam] = useState(user?.team ?? '');
   const [timezone, setTimezone] = useState(user?.timezone ?? '');
 
   // Fields not persisted by the backend yet — local copy, committed to
@@ -34,12 +37,14 @@ const ProfilePage = () => {
 
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+
   useEffect(() => {
-    setFirstName(user?.first_name ?? '');
-    setLastName(user?.last_name ?? '');
+    setName(user?.name ?? '');
+    setTeam(user?.team ?? '');
     setTimezone(user?.timezone ?? '');
   }, [user]);
 
@@ -63,12 +68,45 @@ const ProfilePage = () => {
       availability: l.availability.includes(slot) ? l.availability.filter((s) => s !== slot) : [...l.availability, slot],
     }));
 
-  const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url);
-    setLocal((l) => ({ ...l, photoUrl: url }));
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('The image must be smaller than 5 MB.');
+      return;
+    }
+    setError(null);
+    setIsUploadingPhoto(true);
+    try {
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+      const photoRef = ref(
+        storage,
+        `avatars/${user.id}/${Date.now()}-${safeFileName}`,
+      );
+
+      await uploadBytes(photoRef, file, {
+        contentType: file.type,
+      });
+
+      const photoUrl = await getDownloadURL(photoRef);
+
+      setPhotoPreview(photoUrl);
+      setLocal((current) => ({
+        ...current,
+        photoUrl,
+      }));
+    } catch (err) {
+      console.error(err);
+      setError('Failed to upload photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+      e.target.value = '';
+    }
   };
 
   const connectSlack = () => {
@@ -86,7 +124,21 @@ const ProfilePage = () => {
     setIsSaving(true);
     try {
       // Real fields go through the API.
-      await updateProfile({ first_name: firstName, last_name: lastName, timezone });
+      const [firstName = '', ...lastNameParts] = name.trim().split(/\s+/);
+
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastNameParts.join(' '),
+        timezone,
+      });
+
+      const updatedLocal = {
+        ...local,
+        team,
+      };
+
+      setLocal(updatedLocal);
+      setDetails(updatedLocal);
       // Everything else is local-only for now.
       setDetails(local);
       setSaved(true);
@@ -135,7 +187,7 @@ const ProfilePage = () => {
 
         {error && <p className="text-sm text-destructive mb-4">{error}</p>}
 
-        {/* ── Basics (real API: first_name, last_name, timezone) ── */}
+        {/* ── Basics (real API: name, team, timezone) ── */}
         <Card className="p-6 mb-4">
           <h2 className="font-semibold mb-4 font-display">Photo & Basics</h2>
           <div className="flex items-start gap-5 mb-5">
@@ -157,7 +209,7 @@ const ProfilePage = () => {
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{`${firstName} ${lastName}`.trim() || 'Your Name'}</p>
+              <p className="text-sm font-semibold text-foreground">{name || 'Your Name'}</p>
               <p className="text-xs text-muted-foreground mb-3">{user.email}</p>
               <button
                 type="button"
@@ -170,8 +222,8 @@ const ProfilePage = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="First name" value={firstName} onChange={setFirstName} placeholder="Alex" />
-            <FormInput label="Last name" value={lastName} onChange={setLastName} placeholder="Chen" />
+            <FormInput label="Name" value={name} onChange={setName} placeholder="Alex Chen" />
+            <FormInput label="Team / Department" value={team} onChange={setTeam} options={DEPARTMENT_OPTIONS} />
             <div className="col-span-2">
               <FormInput label="Timezone" value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
             </div>
