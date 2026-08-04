@@ -1,5 +1,6 @@
-from similarities import score
 from history import get_past_matches
+from similarities import score
+
 
 def find_best_match(user, all_users):
 

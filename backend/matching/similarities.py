@@ -6,3 +6,4 @@ def score(user1, user2):
     c = u1.intersection(u2)
 
     return len(c)
+
