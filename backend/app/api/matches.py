@@ -5,14 +5,21 @@ from pydantic import BaseModel
 from app.db import get_db
 from app.matching.history import get_past_matches, save_matches
 
+from app.matching.history import get_past_matches, save_matches
+from app.matching.similarity import score
+
 router = APIRouter(prefix="/matches", tags=["matches"])
 
+# backend/app/api/matches.py
 
 def find_match(user, all_users, conn):
     matched_user = all_users[0]
 
     return matched_user
 
+    for candidate in all_users:
+        if candidate["id"] == user["id"]:
+            continue
 
 def store_match(user, best_user, conn):
     """Saves new pair in DB trough history.save_matches."""
