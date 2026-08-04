@@ -1,6 +1,6 @@
 import psycopg
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.auth import (
   CurrentUser,
@@ -18,7 +18,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class RegisterRequest(BaseModel):
   email: EmailStr
   password: str
-  name: str | None = None
+  first_name: str = Field(min_length=1, pattern=r".*\S.*")
+  last_name: str = Field(min_length=1, pattern=r".*\S.*")
 
 
 class LoginRequest(BaseModel):
@@ -32,9 +33,6 @@ def register(
   response: Response,
   conn: psycopg.Connection = Depends(get_db),
 ):
-  name = body.name.strip() if body.name else ""
-  first_name, _, last_name = name.partition(" ")
-
   existing = conn.execute("SELECT id FROM users WHERE email = %s", (body.email,)).fetchone()
   if existing:
     raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
@@ -45,7 +43,7 @@ def register(
     VALUES (%s, %s, %s, %s)
     RETURNING id, email, first_name, last_name, timezone
     """,
-    (body.email, hash_password(body.password), first_name, last_name),
+    (body.email, hash_password(body.password), body.first_name.strip(), body.last_name.strip()),
   ).fetchone()
   conn.commit()
 

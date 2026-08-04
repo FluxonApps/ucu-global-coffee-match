@@ -9,7 +9,7 @@ import Card from '../components/ui/Card.tsx';
 import { FormInput, MultiSelect } from '../components/ui/FormInput.tsx';
 import { useAuth } from '../context/useAuth.ts';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { DEPARTMENT_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, TIMEZONE_OPTIONS, TOPIC_OPTIONS } from '../data/options.ts';
+import { INTEREST_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, TIMEZONE_OPTIONS, TOPIC_OPTIONS } from '../data/options.ts';
 import { ApiError } from '../lib/api.ts';
 import type { ProfileDetails } from '../types/coffeeMatch.ts';
 
@@ -21,8 +21,8 @@ const ProfilePage = () => {
   const navigate = useNavigate();
 
   // Fields backed by the real API.
-  const [name, setName] = useState(user?.name ?? '');
-  const [team, setTeam] = useState(user?.team ?? '');
+  const [firstName, setFirstName] = useState(user?.first_name ?? '');
+  const [lastName, setLastName] = useState(user?.last_name ?? '');
   const [timezone, setTimezone] = useState(user?.timezone ?? '');
 
   // Fields not persisted by the backend yet — local copy, committed to
@@ -38,8 +38,8 @@ const ProfilePage = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
-    setName(user?.name ?? '');
-    setTeam(user?.team ?? '');
+    setFirstName(user?.first_name ?? '');
+    setLastName(user?.last_name ?? '');
     setTimezone(user?.timezone ?? '');
   }, [user]);
 
@@ -86,7 +86,7 @@ const ProfilePage = () => {
     setIsSaving(true);
     try {
       // Real fields go through the API.
-      await updateProfile({ name, team, timezone });
+      await updateProfile({ first_name: firstName, last_name: lastName, timezone });
       // Everything else is local-only for now.
       setDetails(local);
       setSaved(true);
@@ -135,7 +135,7 @@ const ProfilePage = () => {
 
         {error && <p className="text-sm text-destructive mb-4">{error}</p>}
 
-        {/* ── Basics (real API: name, team, timezone) ── */}
+        {/* ── Basics (real API: first_name, last_name, timezone) ── */}
         <Card className="p-6 mb-4">
           <h2 className="font-semibold mb-4 font-display">Photo & Basics</h2>
           <div className="flex items-start gap-5 mb-5">
@@ -157,7 +157,7 @@ const ProfilePage = () => {
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{name || 'Your Name'}</p>
+              <p className="text-sm font-semibold text-foreground">{`${firstName} ${lastName}`.trim() || 'Your Name'}</p>
               <p className="text-xs text-muted-foreground mb-3">{user.email}</p>
               <button
                 type="button"
@@ -170,8 +170,8 @@ const ProfilePage = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Name" value={name} onChange={setName} placeholder="Alex Chen" />
-            <FormInput label="Team / Department" value={team} onChange={setTeam} options={DEPARTMENT_OPTIONS} />
+            <FormInput label="First name" value={firstName} onChange={setFirstName} placeholder="Alex" />
+            <FormInput label="Last name" value={lastName} onChange={setLastName} placeholder="Chen" />
             <div className="col-span-2">
               <FormInput label="Timezone" value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
             </div>

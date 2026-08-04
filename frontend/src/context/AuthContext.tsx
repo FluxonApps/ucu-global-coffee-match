@@ -6,18 +6,18 @@ import { apiFetch } from '../lib/api.ts';
 export type User = {
   id: number;
   email: string;
-  name: string | null;
-  team: string | null;
+  first_name: string;
+  last_name: string;
   timezone: string | null;
 };
 
 export type AuthContextValue = {
   user: User | null;
   loading: boolean;
-  register: (email: string, password: string, name?: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (fields: Partial<Pick<User, 'name' | 'team' | 'timezone'>>) => Promise<void>;
+  updateProfile: (fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>>) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       .finally(() => setLoading(false));
   }, []);
 
-  const register = async (email: string, password: string, name?: string) => {
+  const register = async (email: string, password: string, firstName: string, lastName: string) => {
     const newUser = await apiFetch<User>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName }),
     });
     setUser(newUser);
   };
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setUser(null);
   };
 
-  const updateProfile = async (fields: Partial<Pick<User, 'name' | 'team' | 'timezone'>>) => {
+  const updateProfile = async (fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>>) => {
     const updatedUser = await apiFetch<User>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(fields),
