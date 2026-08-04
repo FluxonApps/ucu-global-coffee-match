@@ -12,7 +12,21 @@ from app.auth import (
 )
 from app.db import get_db
 
+import secrets
+import string
+import psycopg
+
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+def generate_unique_user_code(conn: psycopg.Connection) -> str:
+  alphabet = string.ascii_letters + string.digits
+  while True:
+    code = "".join(secrets.choice(alphabet) for _ in range(16))
+    exists = conn.execute(
+      "SELECT 1 FROM users WHERE verification_code = %s", (code,)
+    ).fetchone()
+    if not exists:
+      return code
 
 
 class RegisterRequest(BaseModel):
@@ -37,13 +51,21 @@ def register(
   if existing:
     raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
+  verification_code = generate_unique_user_code(conn)
+
   row = conn.execute(
     """
-    INSERT INTO users (email, password_hash, first_name, last_name)
-    VALUES (%s, %s, %s, %s)
-    RETURNING id, email, first_name, last_name, timezone
+    INSERT INTO users (email, password_hash, first_name, last_name, verification_code)
+    VALUES (%s, %s, %s, %s, %s)
+    RETURNING id, email, first_name, last_name, timezone, verification_code
     """,
-    (body.email, hash_password(body.password), body.first_name.strip(), body.last_name.strip()),
+    (
+      body.email,
+      hash_password(body.password),
+      body.first_name.strip(),
+      body.last_name.strip(),
+      verification_code,
+    ),
   ).fetchone()
   conn.commit()
 
