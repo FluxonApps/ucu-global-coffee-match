@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT,
   team TEXT,
   timezone TEXT,
+  interests TEXT,
+  department VARCHAR(100),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -15,4 +17,14 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
 );
+
+CREATE TABLE IF NOT EXISTS matches (
+    id SERIAL PRIMARY KEY,
+    user1_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user2_id INT REFERENCES users(id) ON DELETE CASCADE,
+    matched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'created'
+);
+

@@ -16,26 +16,3 @@ def get_db() -> Iterator[psycopg.Connection]:
         yield conn
     finally:
         conn.close()
-
-def init_db():
-    query = """
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        interests TEXT,
-        department VARCHAR(100)
-    );
-
-    CREATE TABLE IF NOT EXISTS matches (
-        id SERIAL PRIMARY KEY,
-        user1_id INT REFERENCES users(id) ON DELETE CASCADE,
-        user2_id INT REFERENCES users(id) ON DELETE CASCADE,
-        matched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(50) DEFAULT 'created'
-    );
-    """
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query)
-        conn.commit()
