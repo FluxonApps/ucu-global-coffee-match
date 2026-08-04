@@ -1,17 +1,18 @@
-import { ArrowRight, Calendar, Clock, Coffee, ExternalLink, Globe, Star, Users } from 'lucide-react';
+import { ArrowRight, Clock, ExternalLink, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import Avatar from '../components/ui/Avatar.tsx';
 import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
-import Tag from '../components/ui/Tag.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { getMatchHistory, getMatches } from '../services/matches.ts';
+import { getMatchHistory } from '../services/matches.ts';
 import type { MatchHistoryEntry } from '../services/matches.ts';
-import type { Match } from '../types/coffeeMatch.ts';
 
 const MatchesPage = () => {
+  const { details } = useProfileDetails();
+  const isReady = details.interests.length > 0;
+
   const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
 
   useEffect(() => {
@@ -22,6 +23,25 @@ const MatchesPage = () => {
     <div className="min-h-screen bg-background pt-14">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-medium mb-6 font-display">Matches</h1>
+
+        {!isReady && (
+          <div className="max-w-md mb-8">
+            <Card className="p-8 text-center border-dashed">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Users size={24} className="text-muted-foreground" />
+              </div>
+              <h2 className="font-semibold text-foreground mb-2 font-display">No matches yet</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+                Add at least a few interests so we can find the right colleagues for you.
+              </p>
+              <Link to="/profile">
+                <Btn variant="primary" size="md">
+                  Complete My Profile <ArrowRight size={14} />
+                </Btn>
+              </Link>
+            </Card>
+          </div>
+        )}
 
         {history === null && <p className="text-sm text-muted-foreground">Loading history…</p>}
 
