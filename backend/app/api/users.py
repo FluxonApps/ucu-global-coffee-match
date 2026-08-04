@@ -35,4 +35,5 @@ def update_profile(
     (*fields.values(), user["id"]),
   ).fetchone()
   conn.commit()
+
   return row

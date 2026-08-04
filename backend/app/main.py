@@ -4,7 +4,7 @@ import psycopg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, users
+from app.api import auth, matches, users
 from app.db import get_connection
 from app.settings import settings
 
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
       f"Could not connect to the database at {settings.database_url!r}. Is Postgres running? Try `make db`."
     ) from exc
 
-  yield
+    yield
 
 
 app = FastAPI(title="Global Coffee Match API", lifespan=lifespan)
@@ -34,6 +34,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(matches.router)
 
 
 @app.get("/health")

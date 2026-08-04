@@ -20,14 +20,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def generate_unique_user_code(conn: psycopg.Connection) -> str:
     alphabet = string.ascii_letters + string.digits
     while True:
-        # Generate 16 random symbols
         code = "".join(secrets.choice(alphabet) for _ in range(16))
-
-        # Checking if code already is
         exists = conn.execute(
             "SELECT 1 FROM users WHERE user_code = %s", (code,)
         ).fetchone()
-
         if not exists:
             return code
 
@@ -35,7 +31,8 @@ def generate_unique_user_code(conn: psycopg.Connection) -> str:
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-    name: str | None = None
+    first_name: str
+    last_name: str
 
 
 class LoginRequest(BaseModel):
@@ -44,7 +41,11 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
+def register(
+    body: RegisterRequest,
+    response: Response,
+    conn: psycopg.Connection = Depends(get_db),
+):
     existing = conn.execute("SELECT id FROM users WHERE email = %s", (body.email,)).fetchone()
     if existing:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
@@ -53,11 +54,17 @@ def register(body: RegisterRequest, response: Response, conn: psycopg.Connection
 
     row = conn.execute(
         """
-        INSERT INTO users (email, password_hash, name, user_code)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id, user_code, email, name, team, timezone
+        INSERT INTO users (email, password_hash, first_name, last_name, user_code)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id, user_code, email, first_name, last_name, timezone
         """,
-        (body.email, hash_password(body.password), body.name, user_code),
+        (
+            body.email,
+            hash_password(body.password),
+            body.first_name,
+            body.last_name,
+            user_code,
+        ),
     ).fetchone()
     conn.commit()
 
@@ -69,7 +76,7 @@ def register(body: RegisterRequest, response: Response, conn: psycopg.Connection
 @router.post("/login")
 def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
     row = conn.execute(
-        "SELECT id, user_code, email, password_hash, name, team, timezone FROM users WHERE email = %s",
+        "SELECT id, user_code, email, password_hash, first_name, last_name, timezone FROM users WHERE email = %s",
         (body.email,),
     ).fetchone()
 
