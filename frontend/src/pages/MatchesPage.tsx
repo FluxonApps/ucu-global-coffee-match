@@ -7,16 +7,19 @@ import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
 import Tag from '../components/ui/Tag.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { getMatches } from '../services/matches.ts';
+import { getMatchHistory, getMatches } from '../services/matches.ts';
+import type { MatchHistoryEntry } from '../services/matches.ts';
 import type { Match } from '../types/coffeeMatch.ts';
 
 const MatchesPage = () => {
   const { details } = useProfileDetails();
   const isReady = details.interests.length > 0;
   const [matches, setMatches] = useState<Match[] | null>(null);
+  const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
 
   useEffect(() => {
     void getMatches().then(setMatches);
+    void getMatchHistory().then(setHistory);
   }, []);
 
   return (
@@ -128,6 +131,49 @@ const MatchesPage = () => {
               </div>
             )}
           </div>
+        )}
+
+        {history && (
+          <Card className="mt-8 overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+              <Clock size={18} className="text-primary" />
+              <div>
+                <h2 className="font-semibold font-display">History of my matches</h2>
+                <p className="text-xs text-muted-foreground">Your completed coffee matches.</p>
+              </div>
+            </div>
+
+            {history.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {history.map((match) => {
+                  const matchedAt = new Intl.DateTimeFormat('en-GB', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  }).format(new Date(match.matched_at));
+
+                  return (
+                    <li key={match.id} className="flex items-center gap-3 px-5 py-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        {match.colleague.first_name[0]}
+                        {match.colleague.last_name[0]}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground">
+                          {match.colleague.first_name} {match.colleague.last_name}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">{match.colleague.email}</p>
+                      </div>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                        <Clock size={11} /> {matchedAt}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No completed matches yet.</p>
+            )}
+          </Card>
         )}
       </div>
     </div>

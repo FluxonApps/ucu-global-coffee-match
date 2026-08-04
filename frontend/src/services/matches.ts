@@ -11,7 +11,23 @@
 //   return apiFetch<void>('/feedback', { method: 'POST', body: JSON.stringify(payload) });
 
 import { COLLEAGUES, MOCK_MATCHES } from '../data/mockMatches.ts';
+import { apiFetch } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
+
+export type MatchHistoryEntry = {
+  id: number;
+  matched_at: string;
+  colleague: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
+};
+
+export async function getMatchHistory(): Promise<MatchHistoryEntry[]> {
+  return apiFetch<MatchHistoryEntry[]>('/matches/history');
+}
 
 export async function getMatches(): Promise<Match[]> {
   // TODO(backend): GET /matches
