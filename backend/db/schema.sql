@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
   skills TEXT[] DEFAULT '{}',             -- Skills (Figma, React, Python...)
   languages TEXT[] DEFAULT '{}',          -- Languages (English, Ukrainian...)
 
+  slack_user_id TEXT,
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
