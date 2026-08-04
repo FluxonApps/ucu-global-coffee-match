@@ -48,6 +48,7 @@ const ProfilePage = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
 
   useEffect(() => {
     setFirstName(user?.first_name ?? '');
@@ -132,6 +133,7 @@ const ProfilePage = () => {
       const photoUrl = await getDownloadURL(photoReference);
 
       setPhotoPreview(photoUrl);
+      setPhotoLoadFailed(false);
 
       setLocal((current) => ({
         ...current,
@@ -263,18 +265,16 @@ const ProfilePage = () => {
 
           <div className="flex items-start gap-5 mb-5">
             <div className="relative group flex-shrink-0">
-              {photoPreview ? (
+              {photoPreview && !photoLoadFailed ? (
                 <img
                   src={photoPreview}
                   alt={`${displayedName} profile`}
                   className="w-20 h-20 rounded-full object-cover bg-muted"
+                  onError={() => setPhotoLoadFailed(true)}
                 />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-border">
-                  <User
-                    size={28}
-                    className="text-muted-foreground"
-                  />
+                  <User size={28} className="text-muted-foreground" />
                 </div>
               )}
 

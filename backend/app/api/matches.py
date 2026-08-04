@@ -43,7 +43,8 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
           colleague.id AS colleague_id,
           colleague.email AS colleague_email,
           colleague.first_name AS colleague_first_name,
-          colleague.last_name AS colleague_last_name
+          colleague.last_name AS colleague_last_name,
+          colleague.avatar_url AS colleague_avatar_url
         FROM matches
         JOIN users AS colleague
           ON colleague.id = CASE
@@ -65,11 +66,11 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
                 "email": row["colleague_email"],
                 "first_name": row["colleague_first_name"],
                 "last_name": row["colleague_last_name"],
+                "avatar_url": row["colleague_avatar_url"],
             },
         }
         for row in rows
     ]
-
 
 @router.post("/create")
 def create_match(body: MatchCreateRequest, conn: psycopg.Connection = Depends(get_db)):

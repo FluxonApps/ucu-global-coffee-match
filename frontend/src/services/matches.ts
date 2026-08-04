@@ -11,8 +11,9 @@
 //   return apiFetch<void>('/feedback', { method: 'POST', body: JSON.stringify(payload) });
 
 import { COLLEAGUES, MOCK_MATCHES } from '../data/mockMatches.ts';
-import { apiFetch } from '../lib/api.ts';
+import { apiFetch, ApiError } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
+
 
 export type MatchHistoryEntry = {
   id: number;
@@ -22,6 +23,7 @@ export type MatchHistoryEntry = {
     email: string;
     first_name: string;
     last_name: string;
+    avatar_url: string;
   };
 };
 
@@ -34,9 +36,51 @@ export async function getMatches(): Promise<Match[]> {
   return MOCK_MATCHES;
 }
 
+type UserProfileResponse = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  avatar_url: string;
+  role_title: string | null;
+  department: string | null;
+  timezone: string | null;
+  bio: string | null;
+  personal_interests: string[];
+  conversation_topics: string[];
+  skills: string[];
+  languages: string[];
+};
+
+const toColleague = (row: UserProfileResponse): Colleague => ({
+  id: String(row.id),
+  name: `${row.first_name} ${row.last_name}`.trim(),
+  role: row.role_title ?? '',
+  department: row.department ?? '',
+  location: '',
+  timezone: row.timezone ?? '',
+  bio: row.bio ?? '',
+  avatar: row.avatar_url,
+  skills: row.skills,
+  interests: row.personal_interests,
+  languages: row.languages,
+  topics: row.conversation_topics,
+  availability: [],
+  format: [],
+  duration: '',
+  frequency: '',
+});
+
 export async function getColleague(id: string): Promise<Colleague | undefined> {
-  // TODO(backend): GET /colleagues/:id
-  return COLLEAGUES.find((c) => c.id === id);
+  try {
+    const row = await apiFetch<UserProfileResponse>(`/users/${id}`);
+    return toColleague(row);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 export interface FeedbackAnswers {
