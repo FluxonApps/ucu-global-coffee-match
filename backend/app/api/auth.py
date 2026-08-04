@@ -1,6 +1,6 @@
 import psycopg
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.auth import (
   CurrentUser,
@@ -18,7 +18,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class RegisterRequest(BaseModel):
   email: EmailStr
   password: str
-  name: str | None = None
+  first_name: str = Field(min_length=1, pattern=r".*\S.*")
+  last_name: str = Field(min_length=1, pattern=r".*\S.*")
 
 
 class LoginRequest(BaseModel):
@@ -42,7 +43,7 @@ def register(
     VALUES (%s, %s, %s, %s)
     RETURNING id, email, first_name, last_name, timezone
     """,
-    (body.email, hash_password(body.password), body.name, body.name),
+    (body.email, hash_password(body.password), body.first_name.strip(), body.last_name.strip()),
   ).fetchone()
   conn.commit()
 
@@ -54,7 +55,7 @@ def register(
 @router.post("/login")
 def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Depends(get_db)):
   row = conn.execute(
-    "SELECT id, email, password_hash, first_name, timezone FROM users WHERE email = %s",
+    "SELECT id, email, password_hash, first_name, last_name, timezone FROM users WHERE email = %s",
     (body.email,),
   ).fetchone()
 

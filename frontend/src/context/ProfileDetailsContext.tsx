@@ -1,6 +1,6 @@
 // Holds the profile fields the backend doesn't persist yet: bio, skills,
 // interests, topics, languages, availability, format/duration/frequency
-// preferences, and the Slack handle. `name`/`team`/`timezone` live on the
+// preferences, and the Slack handle. `first_name`/`last_name`/`timezone` live on the
 // real `User` from `AuthContext` instead — see `useAuth()`.
 //
 // TODO(backend): once `/users/me` accepts these fields (or a dedicated

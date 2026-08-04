@@ -10,9 +10,8 @@ import { ApiError } from '../lib/api.ts';
 
 const RegisterPage = () => {
   const { user, loading, register } = useAuth();
-  // The backend only stores a single `name` field (no first/last split), so
-  // the form mirrors that instead of the two-field version from the mock.
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +25,7 @@ const RegisterPage = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      await register(email, password, name || undefined);
+      await register(email, password, firstName, lastName);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please, try again.');
     } finally {
@@ -46,7 +45,10 @@ const RegisterPage = () => {
         <p className="text-sm text-muted-foreground mb-8">Just the basics — set up your full profile once you're in.</p>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <FormInput label="Name" value={name} onChange={setName} placeholder="Alex Chen" />
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput label="First name" value={firstName} onChange={setFirstName} placeholder="Alex" required />
+            <FormInput label="Last name" value={lastName} onChange={setLastName} placeholder="Chen" required />
+          </div>
           <FormInput label="Work Email" type="email" value={email} onChange={setEmail} placeholder="alex@company.com" required />
           <FormInput
             label="Password"

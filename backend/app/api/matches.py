@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.db import get_db
-
 from app.matching.history import get_past_matches, save_matches
+
 from app.matching.similarity import score
+
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -41,8 +42,9 @@ def find_match(conn, user, all_users):
 
     return best_user
 
-
 def store_match(user, best_user, conn):
+    """Saves new pair in DB trough history.save_matches."""
+
     save_matches(conn, [(user["id"], best_user["id"])])
     return {"user1_id": user["id"], "user2_id": best_user["id"]}
 
