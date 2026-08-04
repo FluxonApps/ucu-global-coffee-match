@@ -9,30 +9,31 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 class UpdateProfileRequest(BaseModel):
-  name: str | None = None
-  team: str | None = None
-  timezone: str | None = None
+    name: str | None = None
+    team: str | None = None
+    timezone: str | None = None
 
 
 @router.get("/me")
 def get_profile(user: CurrentUser):
-  return user
+    return user
 
 
 @router.patch("/me")
 def update_profile(
-  body: UpdateProfileRequest,
-  user: CurrentUser,
-  conn: psycopg.Connection = Depends(get_db),
+    body: UpdateProfileRequest,
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
 ):
-  fields = body.model_dump(exclude_unset=True)
-  if not fields:
-    return user
+    fields = body.model_dump(exclude_unset=True)
+    if not fields:
+        return user
 
-  set_clause = ", ".join(f"{key} = %s" for key in fields)
-  row = conn.execute(
-    f"UPDATE users SET {set_clause} WHERE id = %s RETURNING id, email, name, team, timezone",
-    (*fields.values(), user["id"]),
-  ).fetchone()
-  conn.commit()
-  return row
+    set_clause = ", ".join(f"{key} = %s" for key in fields)
+    row = conn.execute(
+        f"UPDATE users SET {set_clause} WHERE id = %s RETURNING id, email, name, team, timezone",
+        (*fields.values(), user["id"]),
+    ).fetchone()
+    conn.commit()
+
+    return row

@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
   except psycopg.OperationalError as exc:
     raise RuntimeError(f"Could not connect to the database at {settings.database_url!r}. Is Postgres running? Try `make db`.") from exc
 
-  yield
+    yield
 
 
 app = FastAPI(title="Global Coffee Match API", lifespan=lifespan)
@@ -37,4 +37,4 @@ app.include_router(matches.router)
 
 @app.get("/health")
 async def health():
-  return {"status": "ok"}
+    return {"status": "ok"}
