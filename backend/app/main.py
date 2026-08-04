@@ -15,7 +15,9 @@ async def lifespan(app: FastAPI):
     with get_connection() as conn:
       conn.execute("SELECT 1")
   except psycopg.OperationalError as exc:
-    raise RuntimeError(f"Could not connect to the database at {settings.database_url!r}. Is Postgres running? Try `make db`.") from exc
+    raise RuntimeError(
+      f"Could not connect to the database at {settings.database_url!r}. Is Postgres running? Try `make db`."
+    ) from exc
 
     yield
 
@@ -37,4 +39,4 @@ app.include_router(matches.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+  return {"status": "ok"}
