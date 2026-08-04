@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
       f"Could not connect to the database at {settings.database_url!r}. Is Postgres running? Try `make db`."
     ) from exc
 
-    yield
+  yield
 
 
 app = FastAPI(title="Global Coffee Match API", lifespan=lifespan)
