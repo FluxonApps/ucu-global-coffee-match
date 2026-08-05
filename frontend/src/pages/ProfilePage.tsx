@@ -1,5 +1,5 @@
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { Camera, Check, Link as LinkIcon, LogOut, Unlink, User } from 'lucide-react';
+import { Camera, Check, LogOut, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -15,7 +15,6 @@ import {
   LANGUAGE_OPTIONS,
   SKILL_OPTIONS,
   TIMEZONE_OPTIONS,
-  TOPIC_OPTIONS,
 } from '../data/options.ts';
 import { ApiError } from '../lib/api.ts';
 import { storage } from '../lib/firebase.ts';
@@ -25,7 +24,6 @@ type MultiField =
   | 'skills'
   | 'interests'
   | 'languages'
-  | 'topics'
   | 'format';
 
 const ProfilePage = () => {
@@ -39,7 +37,6 @@ const ProfilePage = () => {
 
   const [local, setLocal] = useState<ProfileDetails>(details);
   const [photoPreview, setPhotoPreview] = useState(details.photoUrl);
-  const [slackInput, setSlackInput] = useState(details.slackHandle);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +56,6 @@ const ProfilePage = () => {
   useEffect(() => {
     setLocal(details);
     setPhotoPreview(details.photoUrl);
-    setSlackInput(details.slackHandle);
   }, [details]);
 
   const set =
@@ -146,28 +142,6 @@ const ProfilePage = () => {
       setIsUploadingPhoto(false);
       event.target.value = '';
     }
-  };
-
-  const connectSlack = () => {
-    if (!slackInput.trim()) {
-      return;
-    }
-
-    setLocal((current) => ({
-      ...current,
-      slackConnected: true,
-      slackHandle: slackInput.trim(),
-    }));
-  };
-
-  const disconnectSlack = () => {
-    setLocal((current) => ({
-      ...current,
-      slackConnected: false,
-      slackHandle: '',
-    }));
-
-    setSlackInput('');
   };
 
   const saveAll = async () => {
@@ -370,77 +344,7 @@ const ProfilePage = () => {
 
         <Card className="p-6 mb-4">
           <h2 className="font-semibold mb-1 font-display">
-            Slack
-          </h2>
-
-          <p className="text-sm text-muted-foreground mb-4">
-            Connect your Slack handle so matches can reach you
-            directly.
-          </p>
-
-          {local.slackConnected ? (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-              <div className="w-8 h-8 rounded-lg bg-[#4A154B] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
-                #
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">
-                  Connected
-                </p>
-
-                <p className="text-xs text-muted-foreground">
-                  @{local.slackHandle}
-                </p>
-              </div>
-
-              <Btn
-                variant="ghost"
-                size="sm"
-                onClick={disconnectSlack}
-              >
-                <Unlink size={13} />
-                Disconnect
-              </Btn>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  @
-                </span>
-
-                <input
-                  type="text"
-                  value={slackInput}
-                  onChange={(event) =>
-                    setSlackInput(event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      connectSlack();
-                    }
-                  }}
-                  placeholder="your-slack-handle"
-                  className="w-full rounded-xl border border-border bg-input-background pl-7 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
-                />
-              </div>
-
-              <Btn
-                variant="secondary"
-                size="md"
-                onClick={connectSlack}
-              >
-                <LinkIcon size={13} />
-                Connect
-              </Btn>
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-6 mb-4">
-          <h2 className="font-semibold mb-1 font-display">
-            Interests & Topics
+            Interests
           </h2>
 
           <p className="text-xs text-muted-foreground mb-4">
@@ -455,14 +359,6 @@ const ProfilePage = () => {
               selected={local.interests}
               onToggle={toggle('interests')}
               hint="Pick as many as you like."
-            />
-
-            <MultiSelect
-              label="Conversation Topics"
-              options={TOPIC_OPTIONS}
-              selected={local.topics}
-              onToggle={toggle('topics')}
-              hint="What do you enjoy discussing at work?"
             />
           </div>
         </Card>
