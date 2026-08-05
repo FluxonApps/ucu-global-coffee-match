@@ -13,11 +13,11 @@ def main() -> None:
 
     row = conn.execute("SELECT count(*) AS count FROM users").fetchone()
     if row["count"] == 0:
-      conn.execute(DB_DIR.joinpath("schema.sql").read_text(encoding="utf-8"))
-      conn.commit()
-      print("Seeded database.")
+        conn.execute(DB_DIR.joinpath("seed.sql").read_text(encoding="utf-8"))
+        conn.commit()
+        print("Seeded database.")
     else:
-      print("Database already has data, skipping seed.")
+        print("Database already has data, skipping seed.")
   finally:
     conn.close()
 
