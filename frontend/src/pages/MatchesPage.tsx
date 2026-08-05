@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, ExternalLink, Users } from 'lucide-react';
+import { ArrowRight, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -38,8 +38,8 @@ const MatchesPage = () => {
     });
 
     // Reload the list so the newly created match appears.
-    const updatedMatches = await getMatches();
-    setMatches(updatedMatches);
+    const updatedHistory = await getMatchHistory();
+    setHistory(updatedHistory);
   } catch (error) {
     setMatchError(
       error instanceof ApiError

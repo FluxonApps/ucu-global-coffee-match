@@ -13,7 +13,6 @@
 import { COLLEAGUES, MOCK_MATCHES } from '../data/mockMatches.ts';
 import { apiFetch, ApiError } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
-import { apiFetch } from '../lib/api.ts';
 
 
 export type MatchHistoryEntry = {
