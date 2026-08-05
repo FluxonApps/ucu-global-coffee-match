@@ -6,10 +6,13 @@ requires-python = ">=3.12"
 dependencies = [
   "bcrypt>=5.0.0",
   "fastapi>=0.141.1",
+  "psycopg2-binary>=2.9.12",
   "psycopg[binary]>=3.3.4",
   "pydantic-settings>=2.14.2",
   "pydantic[email]>=2.13.4",
   "python-dotenv>=1.2.2",
+  "slack-bolt>=1.30.0",
+  "slack-sdk>=3.43.0",
   "uvicorn[standard]>=0.52.1",
 ]
 

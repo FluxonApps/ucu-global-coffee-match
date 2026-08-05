@@ -8,8 +8,8 @@
     pip install psycopg2-binary
 """
 
-import os
 import logging
+import os
 from contextlib import contextmanager
 from dotenv import load_dotenv
 import psycopg2
@@ -96,11 +96,11 @@ def link_slack_account(user_id: int, slack_user_id: str) -> None:
 
 
 def get_user_by_code(code: str) -> dict | None:
-    """Повертає користувача за реєстраційним кодом (code_user) або None."""
+    """Повертає користувача за реєстраційним кодом (verification_code) або None."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM users WHERE code_user = %s",
+                "SELECT * FROM users WHERE verification_code = %s",
                 (code,),
             )
             return cur.fetchone()
