@@ -37,16 +37,18 @@ Slack-бот, який за командою /random_user вибирає вип�
     9. Перевстановити застосунок у workspace після зміни scopes/подій
 """
 
-import os
 import json
-import random
 import logging
-
-from dotenv import load_dotenv
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
+import os
+import random
+import threading
 
 import db
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 load_dotenv()
 
@@ -95,9 +97,7 @@ def resolve_avatar_url(client, db_user: dict) -> str:
     """
     avatar_url = db_user.get("avatar_url")
 
-    is_placeholder = (
-        not avatar_url or avatar_url == "/static/avatars/default.png"
-    )
+    is_placeholder = not avatar_url or avatar_url == "/static/avatars/default.png"
 
     if is_placeholder and db_user.get("slack_user_id"):
         try:
@@ -213,7 +213,10 @@ def try_login_with_code(code: str, slack_user_id: str) -> tuple[bool, str]:
         return False, f"Код правильний, але не вдалося прив'язати акаунт: {e}"
 
     full_name = f"{user['first_name']} {user['last_name']}"
-    return True, f"✅ Успішний вхід! Акаунт *{full_name}* тепер прив'язаний до твого Slack."
+    return (
+        True,
+        f"✅ Успішний вхід! Акаунт *{full_name}* тепер прив'язаний до твого Slack.",
+    )
 
 
 @app.command("/login")
@@ -286,7 +289,9 @@ def set_disturb_status(ack, respond, command):
     arg = command.get("text", "").strip().lower()
 
     if arg not in ("on", "off"):
-        respond("Використання: `/distarb on` — дозволити турбувати, або `/distarb off` — не турбувати.")
+        respond(
+            "Використання: `/distarb on` — дозволити турбувати, або `/distarb off` — не турбувати."
+        )
         return
 
     slack_user_id = command["user_id"]
@@ -310,7 +315,9 @@ def set_disturb_status(ack, respond, command):
     if new_status:
         respond("🔔 `/distarb on` — тебе знову можуть вибрати в `/random_user`.")
     else:
-        respond("🔕 `/distarb off` — режим «не турбувати» увімкнено, тебе тимчасово не показуватимуть.")
+        respond(
+            "🔕 `/distarb off` — режим «не турбувати» увімкнено, тебе тимчасово не показуватимуть."
+        )
 
 
 @app.command("/help")
@@ -352,6 +359,25 @@ def handle_first_open(event, client):
     save_welcomed_users(welcomed_users)
 
 
+# Створюємо мінімальний HTTP-сервер для Render Health Check
+web_app = FastAPI()
+
+
+@web_app.get("/")
+@web_app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(web_app, host="0.0.0.0", port=port)
+
+
 if __name__ == "__main__":
+    # Запускаємо HTTP-сервер у фоновому потоці, щоб Render задеплоїв Web Service
+    threading.Thread(target=run_web_server, daemon=True).start()
+
+    # Запускаємо Slack Socket Mode
     handler = SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
     handler.start()
