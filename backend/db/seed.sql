@@ -1,4 +1,5 @@
 INSERT INTO users (
+  verification_code,
   first_name,
   last_name,
   email,
@@ -14,6 +15,7 @@ INSERT INTO users (
   languages
 ) VALUES
 (
+  'aX9kL2mP8qR4vW1z',
   'Alex',
   'Chen',
   'alex@company.com',
@@ -29,6 +31,7 @@ INSERT INTO users (
   ARRAY['English', 'Ukrainian']
 ),
 (
+  'bY0mL3nQ9sS5wX2a',
   'Matfhei',
   'Ov',
   'matfheiwovubdjs@gmail.com',

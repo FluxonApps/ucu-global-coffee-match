@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
   last_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  verification_code TEXT UNIQUE NOT NULL,
 
   -- Profile
   avatar_url TEXT DEFAULT '/static/avatars/default.png',
@@ -22,7 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
   languages TEXT[] DEFAULT '{}',          -- Languages (English, Ukrainian...)
 
   slack_user_id TEXT,
-
+  code_user TEXT,
+  is_available BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -32,9 +32,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-
 );
-
 
 CREATE TABLE IF NOT EXISTS matches (
   id SERIAL PRIMARY KEY,
