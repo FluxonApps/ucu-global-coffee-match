@@ -1,15 +1,11 @@
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
+from app.api.availability import get_recommended_time_between_users
 from app.auth import CurrentUser
 from app.db import get_db
 from app.matching.history import get_past_matches, save_matches
-from app.matching.availability import find_recommended_time
-
 from app.matching.similarity import score
-
-
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -52,10 +48,6 @@ def store_match(user, best_user, conn):
     }
 
 
-class MatchCreateRequest(BaseModel):
-    user_id: int
-
-
 @router.get("/history")
 def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_db)):
     """Return the current user's recorded matches with the matched colleague's details."""
@@ -85,6 +77,7 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
         {
             "id": row["id"],
             "matched_at": row["matched_at"],
+            "recommended_time": get_recommended_time_between_users(user["id"], row["colleague_id"], conn),
             "colleague": {
                 "id": row["colleague_id"],
                 "email": row["colleague_email"],
@@ -121,49 +114,7 @@ def create_match(
             detail="No available match found",
         )
 
-    # ---------------------------------------------------------
-    # Get availability for both users
-    # ---------------------------------------------------------
-
-    availability_rows = conn.execute(
-        """
-        SELECT user_id, day_of_week, hour_slot, available
-        FROM user_availability
-        WHERE user_id IN (%s, %s)
-        """,
-        (db_user["id"], best_user["id"]),
-    ).fetchall()
-
-    user_availability = [
-        {
-            "day": row["day_of_week"],
-            "hour": row["hour_slot"],
-            "available": row["available"],
-        }
-        for row in availability_rows
-        if row["user_id"] == db_user["id"]
-    ]
-
-    matched_availability = [
-        {
-            "day": row["day_of_week"],
-            "hour": row["hour_slot"],
-            "available": row["available"],
-        }
-        for row in availability_rows
-        if row["user_id"] == best_user["id"]
-    ]
-
-    # ---------------------------------------------------------
-    # Find the best one-hour slot for both users
-    # ---------------------------------------------------------
-
-    recommended_time = find_recommended_time(
-        user_availability,
-        db_user["timezone"],
-        matched_availability,
-        best_user["timezone"],
-    )
+    recommended_time = get_recommended_time_between_users(db_user["id"], best_user["id"], conn)
 
     # ---------------------------------------------------------
     # Save the match exactly as before

@@ -16,7 +16,7 @@ import {
   SKILL_OPTIONS,
   TIMEZONE_OPTIONS,
 } from '../data/options.ts';
-import { ApiError } from '../lib/api.ts';
+import { ApiError, apiFetch } from '../lib/api.ts';
 import { storage } from '../lib/firebase.ts';
 import type { ProfileDetails } from '../types/coffeeMatch.ts';
 
@@ -25,6 +25,8 @@ type MultiField =
   | 'interests'
   | 'languages'
   | 'format';
+
+const DAY_INDEX: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4 };
 
 const ProfilePage = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -154,6 +156,20 @@ const ProfilePage = () => {
         last_name: lastName.trim(),
         timezone,
         personal_interests: local.interests,
+      });
+
+      await apiFetch('/users/me/availability', {
+        method: 'PUT',
+        body: JSON.stringify(
+          local.availability.flatMap((slot) => {
+            const [day, hour] = slot.split('-');
+            const dayIndex = DAY_INDEX[day];
+            const hourNumber = Number(hour);
+            return dayIndex === undefined || !Number.isInteger(hourNumber)
+              ? []
+              : [{ day: dayIndex, hour: hourNumber, available: true }];
+          }),
+        ),
       });
       
       setDetails({

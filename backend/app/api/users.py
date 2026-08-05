@@ -116,14 +116,13 @@ def set_availability(
     user: CurrentUser,
     conn: psycopg.Connection = Depends(get_db),
 ):
-    conn.execute(
-        "DELETE FROM user_availability WHERE user_id = %s", (user["id"],)
-    )
-    conn.executemany(
-        """INSERT INTO user_availability (user_id, day_of_week, hour_slot, available)
-           VALUES (%s, %s, %s, %s)""",
-        [(user["id"], s.day, s.hour, s.available) for s in slots],
-    )
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM user_availability WHERE user_id = %s", (user["id"],))
+        cur.executemany(
+            """INSERT INTO user_availability (user_id, day_of_week, hour_slot, available)
+               VALUES (%s, %s, %s, %s)""",
+            [(user["id"], slot.day, slot.hour, slot.available) for slot in slots],
+        )
     conn.commit()
     return {"status": "ok"}
 

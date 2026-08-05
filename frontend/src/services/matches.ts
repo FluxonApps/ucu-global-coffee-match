@@ -17,6 +17,12 @@ import type { Colleague, Match } from '../types/coffeeMatch.ts';
 export type MatchHistoryEntry = {
   id: number;
   matched_at: string;
+  recommended_time: {
+    utc: string;
+    user_local: { timezone: string; display: string };
+    match_local: { timezone: string; display: string };
+    duration_minutes: number;
+  } | null;
   colleague: {
     id: number;
     email: string;
