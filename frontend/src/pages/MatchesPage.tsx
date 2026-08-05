@@ -6,17 +6,19 @@ import Avatar from '../components/ui/Avatar.tsx';
 import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { getMatchHistory } from '../services/matches.ts';
-import type { MatchHistoryEntry } from '../services/matches.ts';
+import { createMatch, getMatchHistory } from '../services/matches.ts';
+import type { CreateMatchResponse, MatchHistoryEntry } from '../services/matches.ts';
+import MatchTopicsCard from '../components/MatchTopicsCard.tsx';
 
 import { useAuth } from '../context/useAuth.ts';
-import { ApiError, apiFetch } from '../lib/api.ts';
+import { ApiError } from '../lib/api.ts';
 
 const MatchesPage = () => {
   const { details } = useProfileDetails();
   const isReady = details.interests.length > 0;
 
   const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
+  const [latestMatch, setLatestMatch] = useState<CreateMatchResponse | null>(null);
 
   const { user } = useAuth();
   const [isMatching, setIsMatching] = useState(false);
@@ -27,29 +29,28 @@ const MatchesPage = () => {
   }, []);
 
   const handleFindMatch = async () => {
-  if (!user) return;
+    if (!user) return;
 
-  setIsMatching(true);
-  setMatchError('');
+    setIsMatching(true);
+    setMatchError('');
 
-  try {
-    await apiFetch('/matches/create', {
-      method: 'POST',
-    });
+    try {
+      const result = await createMatch();
+      setLatestMatch(result);
 
-    // Reload the list so the newly created match appears.
-    const updatedHistory = await getMatchHistory();
-    setHistory(updatedHistory);
-  } catch (error) {
-    setMatchError(
-      error instanceof ApiError
-        ? error.message
-        : 'Could not create a match. Please try again.',
-    );
-  } finally {
-    setIsMatching(false);
-  }
-};
+      // Reload the list so the newly created match appears.
+      const updatedHistory = await getMatchHistory();
+      setHistory(updatedHistory);
+    } catch (error) {
+      setMatchError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create a match. Please try again.',
+      );
+    } finally {
+      setIsMatching(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pt-14">
@@ -71,6 +72,14 @@ const MatchesPage = () => {
         </div>
 
         {matchError && <p className="mb-4 text-sm text-destructive">{matchError}</p>}
+
+        {latestMatch && (
+          <MatchTopicsCard
+            colleague={latestMatch.match}
+            topics={latestMatch.conversation_topics}
+            onDismiss={() => setLatestMatch(null)}
+          />
+        )}
 
         {!isReady && (
           <div className="max-w-md mb-8">
@@ -114,8 +123,8 @@ const MatchesPage = () => {
                   const fullName = `${match.colleague.first_name} ${match.colleague.last_name}`;
 
                   return (
-                    <li key={match.id} className="flex items-center gap-3 px-5 py-4">
-                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0">
+                    <li key={match.id} className="flex items-start gap-3 px-5 py-4">
+                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0 pt-1">
                         <Avatar src={match.colleague.avatar_url} name={fullName} size={44} />
                       </Link>
 
@@ -126,7 +135,25 @@ const MatchesPage = () => {
                         >
                           {fullName}
                         </Link>
-                        <p className="truncate text-sm text-muted-foreground">{match.colleague.email}</p>
+                        <p className="truncate text-sm text-muted-foreground mb-2">{match.colleague.email}</p>
+
+                        {match.conversation_topics && match.conversation_topics.length > 0 && (
+                          <div className="mt-1">
+                            <p className="text-xs font-semibold text-foreground mb-1">
+                              Conversation topic suggestions
+                            </p>
+                            <ul className="space-y-1">
+                              {match.conversation_topics.map((topic, index) => (
+                                <li
+                                  key={index}
+                                  className="text-xs text-muted-foreground leading-relaxed"
+                                >
+                                  • {topic}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">

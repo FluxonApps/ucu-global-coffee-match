@@ -23,6 +23,7 @@ export type MatchHistoryEntry = {
     match_local: { timezone: string; display: string };
     duration_minutes: number;
   } | null;
+  conversation_topics: string[];
   colleague: {
     id: number;
     email: string;
@@ -34,6 +35,27 @@ export type MatchHistoryEntry = {
 
 export async function getMatchHistory(): Promise<MatchHistoryEntry[]> {
   return apiFetch<MatchHistoryEntry[]>('/matches/history');
+}
+
+export type CreateMatchResponse = {
+  match: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    timezone: string | null;
+    avatar_url: string;
+  };
+  match_record: {
+    user1_id: number;
+    user2_id: number;
+  };
+  recommended_time: MatchHistoryEntry['recommended_time'];
+  conversation_topics: string[];
+};
+
+export async function createMatch(): Promise<CreateMatchResponse> {
+  return apiFetch<CreateMatchResponse>('/matches/create', { method: 'POST' });
 }
 
 export async function getMatches(): Promise<Match[]> {
