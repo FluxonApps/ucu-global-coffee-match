@@ -1,4 +1,4 @@
-import { Bookmark, Calendar, Clock, Globe, Star } from 'lucide-react';
+import { Bookmark, Clock, Globe, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
@@ -38,7 +38,7 @@ const PublicProfilePage = () => {
     );
   }
 
-  const mutual = colleague.interests.filter((i) => details.interests.includes(i));
+  const mutual = new Set(colleague.interests.filter((i) => details.interests.includes(i)));
   const availDays = DAYS.map((d) => ({
     day: d,
     hours: colleague.availability.filter((s) => s.startsWith(d.key + '-')).map((s) => HOUR_LABELS[s.split('-')[1]] || s.split('-')[1]),
@@ -57,9 +57,6 @@ const PublicProfilePage = () => {
             <div className="-mt-10 flex items-end justify-between mb-4">
               <Avatar src={colleague.avatar} name={colleague.name} size={80} />
               <div className="flex gap-2">
-                <Btn variant="ghost" size="sm" onClick={() => {}}>
-                  <Calendar size={13} /> Schedule Coffee
-                </Btn>
                 <Btn variant="primary" size="sm" onClick={() => {}}>
                   <Bookmark size={13} /> Save Contact
                 </Btn>
@@ -79,18 +76,19 @@ const PublicProfilePage = () => {
         </Card>
 
         <div className="grid md:grid-cols-2 gap-4 mb-4">
-          {mutual.length > 0 && (
-            <Card className="p-5">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Star size={14} className="text-primary" /> Mutual Interests
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {mutual.map((i) => (
-                  <Tag key={i} label={i} />
-                ))}
-              </div>
-            </Card>
-          )}
+          <Card className="p-5">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Star size={14} className="text-primary" /> Interests
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {colleague.interests.map((i) => (
+                <Tag key={i} label={i} active={mutual.has(i)} />
+              ))}
+            </div>
+            {mutual.size > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">Highlighted interests are shared with you.</p>
+            )}
+          </Card>
           <Card className="p-5">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Clock size={14} className="text-primary" /> Usual Availability
@@ -119,14 +117,6 @@ const PublicProfilePage = () => {
             <div className="flex flex-wrap gap-2">
               {colleague.skills.map((s) => (
                 <Tag key={s} label={s} />
-              ))}
-            </div>
-          </Card>
-          <Card className="p-5">
-            <h3 className="font-semibold mb-3">Topics</h3>
-            <div className="flex flex-wrap gap-2">
-              {colleague.topics.map((t) => (
-                <Tag key={t} label={t} />
               ))}
             </div>
           </Card>

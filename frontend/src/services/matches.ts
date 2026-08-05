@@ -64,7 +64,6 @@ const toColleague = (row: UserProfileResponse): Colleague => ({
   skills: row.skills,
   interests: row.personal_interests,
   languages: row.languages,
-  topics: row.conversation_topics,
   availability: [],
   format: [],
   duration: '',
