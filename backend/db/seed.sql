@@ -1,5 +1,5 @@
 INSERT INTO users (
-  user_code,
+  verification_code,
   first_name,
   last_name,
   email,
