@@ -7,7 +7,6 @@ import psycopg
 from fastapi import Cookie, Depends, HTTPException, Response, status
 
 from app.db import get_db
-from app.settings import settings
 
 SESSION_COOKIE_NAME = "session_token"
 SESSION_TTL = timedelta(days=30)
@@ -37,15 +36,21 @@ def set_session_cookie(response: Response, token: str, expires_at: datetime) -> 
     key=SESSION_COOKIE_NAME,
     value=token,
     httponly=True,
-    secure=settings.cookie_secure,
-    samesite="lax",
+    secure=True,  # Повинно бути True для SameSite=none
+    samesite="none",  # Дозволяє передавати куку між різними доменами
     expires=expires_at,
     path="/",
   )
 
 
 def clear_session_cookie(response: Response) -> None:
-  response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+  response.delete_cookie(
+    key=SESSION_COOKIE_NAME,
+    path="/",
+    httponly=True,
+    secure=True,
+    samesite="none",
+  )
 
 
 def get_current_user(
