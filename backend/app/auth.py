@@ -57,7 +57,7 @@ def get_current_user(
 
   row = conn.execute(
     """
-    SELECT users.id, users.email, users.name, users.team, users.timezone
+    SELECT users.id, users.email, users.first_name, users.last_name, users.timezone
     FROM sessions
     JOIN users ON users.id = sessions.user_id
     WHERE sessions.token = %s AND sessions.expires_at > now()

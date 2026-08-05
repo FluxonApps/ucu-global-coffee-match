@@ -1,5 +1,5 @@
 import psycopg
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.auth import CurrentUser
@@ -59,6 +59,11 @@ def update_profile(
     if not fields:
         return user
 
+    # Array columns are NOT NULL DEFAULT '{}' in the schema — never send NULL for them.
+    for key in ARRAY_FIELDS:
+        if key in fields and fields[key] is None:
+            fields[key] = []
+
     set_expressions = []
     for key in fields:
         if key in ARRAY_FIELDS:
@@ -71,8 +76,8 @@ def update_profile(
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
         row = cur.execute(
             f"""UPDATE users SET {set_clause}
-               WHERE id = %s
-               RETURNING {PROFILE_COLUMNS}""",
+                WHERE id = %s
+                RETURNING {PROFILE_COLUMNS}""",
             (*fields.values(), user["id"]),
         ).fetchone()
 
@@ -109,3 +114,21 @@ def set_availability(
     conn.commit()
     return {"status": "ok"}
 
+
+@router.get("/{user_id}")
+def get_user_profile(user_id: int, conn: psycopg.Connection = Depends(get_db)):
+    row = conn.execute(
+        """
+        SELECT id, first_name, last_name, email, avatar_url,
+               role_title, department, timezone, bio,
+               personal_interests, conversation_topics, skills, languages
+        FROM users
+        WHERE id = %s
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return row
