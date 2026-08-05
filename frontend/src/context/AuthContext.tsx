@@ -14,7 +14,7 @@ export type User = {
 export type AuthContextValue = {
   user: User | null;
   loading: boolean;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<string>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 
