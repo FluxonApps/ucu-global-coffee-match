@@ -8,7 +8,6 @@ from app.matching.history import get_past_matches, save_matches
 
 from app.matching.similarity import score
 
-from app.auth import CurrentUser
 
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -24,14 +23,11 @@ def find_match(conn, user, all_users):
     for candidate in all_users:
         if candidate["id"] == user["id"]:
             continue
-
-        # history contains both (A, B) and (B, A)
         if (user["id"], candidate["id"]) in past_pairs:
             continue
 
         candidate_score = score(user, candidate)
 
-        # smallest ID makes ties deterministic
         if (
             candidate_score > best_score
             or (
@@ -45,9 +41,9 @@ def find_match(conn, user, all_users):
 
     return best_user
 
+
 def store_match(user, best_user, conn):
     """Saves new pair in DB trough history.save_matches."""
-
     save_matches(conn, [(user["id"], best_user["id"])])
     return {"user1_id": user["id"], "user2_id": best_user["id"]}
 
@@ -67,7 +63,8 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
           colleague.id AS colleague_id,
           colleague.email AS colleague_email,
           colleague.first_name AS colleague_first_name,
-          colleague.last_name AS colleague_last_name
+          colleague.last_name AS colleague_last_name,
+          colleague.avatar_url AS colleague_avatar_url
         FROM matches
         JOIN users AS colleague
           ON colleague.id = CASE
@@ -89,11 +86,11 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
                 "email": row["colleague_email"],
                 "first_name": row["colleague_first_name"],
                 "last_name": row["colleague_last_name"],
+                "avatar_url": row["colleague_avatar_url"],
             },
         }
         for row in rows
     ]
-
 
 @router.post("/create")
 def create_match(

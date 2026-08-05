@@ -39,11 +39,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   const register = async (email: string, password: string, firstName: string, lastName: string) => {
-    const newUser = await apiFetch<User>('/auth/register', {
+    const newUser = await apiFetch<User & { verification_code: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName }),
     });
     setUser(newUser);
+    return newUser.verification_code;
   };
 
   const login = async (email: string, password: string) => {

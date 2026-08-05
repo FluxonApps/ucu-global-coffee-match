@@ -1,15 +1,13 @@
-import { ArrowRight, Calendar, Clock, Coffee, ExternalLink, Globe, Star, Users } from 'lucide-react';
+import { ArrowRight, Clock, ExternalLink, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import Avatar from '../components/ui/Avatar.tsx';
 import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
-import Tag from '../components/ui/Tag.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { getMatchHistory, getMatches } from '../services/matches.ts';
+import { getMatchHistory } from '../services/matches.ts';
 import type { MatchHistoryEntry } from '../services/matches.ts';
-import type { Match } from '../types/coffeeMatch.ts';
 
 import { useAuth } from '../context/useAuth.ts';
 import { ApiError, apiFetch } from '../lib/api.ts';
@@ -17,7 +15,7 @@ import { ApiError, apiFetch } from '../lib/api.ts';
 const MatchesPage = () => {
   const { details } = useProfileDetails();
   const isReady = details.interests.length > 0;
-  const [matches, setMatches] = useState<Match[] | null>(null);
+
   const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
 
   const { user } = useAuth();
@@ -25,7 +23,6 @@ const MatchesPage = () => {
   const [matchError, setMatchError] = useState('');
 
   useEffect(() => {
-    void getMatches().then(setMatches);
     void getMatchHistory().then(setHistory);
   }, []);
 
@@ -76,7 +73,7 @@ const MatchesPage = () => {
         {matchError && <p className="mb-4 text-sm text-destructive">{matchError}</p>}
 
         {!isReady && (
-          <div className="max-w-md">
+          <div className="max-w-md mb-8">
             <Card className="p-8 text-center border-dashed">
               <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <Users size={24} className="text-muted-foreground" />
@@ -94,95 +91,10 @@ const MatchesPage = () => {
           </div>
         )}
 
-        {isReady && matches === null && <p className="text-sm text-muted-foreground">Loading matches…</p>}
-
-        {isReady && matches && (
-          <div className="flex flex-col gap-4">
-            {[...matches].reverse().map((match) => (
-              <Card key={match.id} className="p-5">
-                <div className="flex items-start gap-4">
-                  <Link to={`/profile/${match.colleague.id}`}>
-                    <Avatar src={match.colleague.avatar} name={match.colleague.name} size={52} />
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <Link
-                          to={`/profile/${match.colleague.id}`}
-                          className="font-semibold text-foreground hover:text-primary transition-colors"
-                        >
-                          {match.colleague.name}
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {match.colleague.role} · {match.colleague.department}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {match.status === 'current' && (
-                          <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full font-mono">
-                            Active
-                          </span>
-                        )}
-                        {match.status === 'upcoming' && (
-                          <span className="text-xs font-medium text-[#7A6030] bg-[#D8D3B3]/60 px-2 py-0.5 rounded-full font-mono">
-                            Upcoming
-                          </span>
-                        )}
-                        {match.status === 'previous' && !match.feedbackGiven && (
-                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-mono">
-                            Needs feedback
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {match.sharedInterests.map((i) => (
-                        <Tag key={i} label={i} />
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground font-mono">
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} /> Matched {match.matchDate}
-                      </span>
-                      {match.scheduledDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar size={11} /> {match.scheduledDate}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Globe size={11} /> {match.colleague.timezone}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-                  <Link to={`/profile/${match.colleague.id}`}>
-                    <Btn variant="outline" size="sm">
-                      <ExternalLink size={12} /> View Profile
-                    </Btn>
-                  </Link>
-                  {match.status === 'previous' && !match.feedbackGiven && (
-                    <Link to="/feedback">
-                      <Btn variant="secondary" size="sm">
-                        <Star size={12} /> Leave Feedback
-                      </Btn>
-                    </Link>
-                  )}
-                </div>
-              </Card>
-            ))}
-            {matches.length === 0 && (
-              <div className="text-center py-16 text-muted-foreground">
-                <Coffee size={32} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Nothing here yet</p>
-                <p className="text-sm mt-1">Your matches will appear here.</p>
-              </div>
-            )}
-          </div>
-        )}
+        {history === null && <p className="text-sm text-muted-foreground">Loading history…</p>}
 
         {history && (
-          <Card className="mt-8 overflow-hidden">
+          <Card className="overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
               <Clock size={18} className="text-primary" />
               <div>
@@ -199,21 +111,34 @@ const MatchesPage = () => {
                     timeStyle: 'short',
                   }).format(new Date(match.matched_at));
 
+                  const fullName = `${match.colleague.first_name} ${match.colleague.last_name}`;
+
                   return (
                     <li key={match.id} className="flex items-center gap-3 px-5 py-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                        {match.colleague.first_name[0]}
-                        {match.colleague.last_name[0]}
-                      </div>
+                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0">
+                        <Avatar src={match.colleague.avatar_url} name={fullName} size={44} />
+                      </Link>
+
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-foreground">
-                          {match.colleague.first_name} {match.colleague.last_name}
-                        </p>
+                        <Link
+                          to={`/profile/${match.colleague.id}`}
+                          className="font-medium text-foreground hover:text-primary transition-colors"
+                        >
+                          {fullName}
+                        </Link>
                         <p className="truncate text-sm text-muted-foreground">{match.colleague.email}</p>
                       </div>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
-                        <Clock size={11} /> {matchedAt}
-                      </span>
+
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                          <Clock size={11} /> {matchedAt}
+                        </span>
+                        <Link to={`/profile/${match.colleague.id}`}>
+                          <Btn variant="outline" size="sm">
+                            <ExternalLink size={12} /> View Profile
+                          </Btn>
+                        </Link>
+                      </div>
                     </li>
                   );
                 })}

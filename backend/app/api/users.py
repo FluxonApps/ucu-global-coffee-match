@@ -1,5 +1,5 @@
 import psycopg
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.auth import CurrentUser
@@ -38,3 +38,23 @@ def update_profile(
   conn.commit()
 
   return row
+
+from fastapi import HTTPException
+
+@router.get("/{user_id}")
+def get_user_profile(user_id: int, conn: psycopg.Connection = Depends(get_db)):
+    row = conn.execute(
+        """
+        SELECT id, first_name, last_name, email, avatar_url,
+               role_title, department, timezone, bio,
+               personal_interests, conversation_topics, skills, languages
+        FROM users
+        WHERE id = %s
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return row
