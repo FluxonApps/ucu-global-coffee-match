@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   last_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  verification_code TEXT UNIQUE NOT NULL,
 
   -- Profile
   avatar_url TEXT DEFAULT '/static/avatars/default.png',
