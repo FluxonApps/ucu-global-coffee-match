@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   languages TEXT[] NOT NULL DEFAULT '{}',
 
   slack_user_id TEXT,
+  is_available BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -32,7 +33,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-
 CREATE TABLE IF NOT EXISTS matches (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
