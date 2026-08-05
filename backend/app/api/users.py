@@ -18,7 +18,6 @@ class UpdateProfileRequest(BaseModel):
     avatar_url: str | None = None
     slack_user_id: str | None = None
     personal_interests: list[str] | None = None
-    conversation_topics: list[str] | None = None
     skills: list[str] | None = None
     languages: list[str] | None = None
 
@@ -31,7 +30,6 @@ class AvailabilitySlot(BaseModel):
 
 ARRAY_FIELDS = {
     "personal_interests",
-    "conversation_topics",
     "skills",
     "languages",
 }
@@ -40,7 +38,7 @@ ARRAY_FIELDS = {
 PROFILE_COLUMNS = """
     id, email, first_name, last_name, role_title, department,
     timezone, bio, avatar_url, slack_user_id,
-    personal_interests, conversation_topics, skills, languages, created_at
+    personal_interests, skills, languages, created_at
 """
 
 
@@ -121,7 +119,7 @@ def get_user_profile(user_id: int, conn: psycopg.Connection = Depends(get_db)):
         """
         SELECT id, first_name, last_name, email, avatar_url,
                role_title, department, timezone, bio,
-               personal_interests, conversation_topics, skills, languages
+               personal_interests, skills, languages
         FROM users
         WHERE id = %s
         """,

@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS users (
 
   -- Interests & Skills
   personal_interests TEXT[] NOT NULL DEFAULT '{}',
-  conversation_topics TEXT[] NOT NULL DEFAULT '{}',
   skills TEXT[] NOT NULL DEFAULT '{}',
   languages TEXT[] NOT NULL DEFAULT '{}',
 

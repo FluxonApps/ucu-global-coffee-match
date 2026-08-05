@@ -14,7 +14,6 @@ export interface ProfileDetails {
   skills: string[];
   interests: string[];
   languages: string[];
-  topics: string[];
   /** Slot format: "Mon-09", "Tue-14", etc. */
   availability: string[];
   format: string[];
@@ -36,7 +35,6 @@ export interface Colleague {
   skills: string[];
   interests: string[];
   languages: string[];
-  topics: string[];
   availability: string[];
   format: string[];
   duration: string;
