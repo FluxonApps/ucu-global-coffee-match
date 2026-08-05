@@ -17,7 +17,12 @@ export type AuthContextValue = {
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>>) => Promise<void>;
+
+  updateProfile: (
+    fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>> & {
+      personal_interests?: string[];
+    },
+  ) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

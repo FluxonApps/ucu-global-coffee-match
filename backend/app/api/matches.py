@@ -6,21 +6,41 @@ from app.auth import CurrentUser
 from app.db import get_db
 from app.matching.history import get_past_matches, save_matches
 
-from app.matching.history import get_past_matches, save_matches
 from app.matching.similarity import score
+
+
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
 # backend/app/api/matches.py
 
-def find_match(user, all_users, conn):
-    matched_user = all_users[0]
+def find_match(conn, user, all_users):
+    past_pairs = get_past_matches(conn)
 
-    return matched_user
+    best_user = None
+    best_score = -1
 
     for candidate in all_users:
         if candidate["id"] == user["id"]:
             continue
+        if (user["id"], candidate["id"]) in past_pairs:
+            continue
+
+        candidate_score = score(user, candidate)
+
+        if (
+            candidate_score > best_score
+            or (
+                candidate_score == best_score
+                and best_user is not None
+                and candidate["id"] < best_user["id"]
+            )
+        ):
+            best_score = candidate_score
+            best_user = candidate
+
+    return best_user
+
 
 def store_match(user, best_user, conn):
     """Saves new pair in DB trough history.save_matches."""
@@ -73,24 +93,20 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
     ]
 
 @router.post("/create")
-def create_match(body: MatchCreateRequest, conn: psycopg.Connection = Depends(get_db)):
-    user_id = body.user_id
+def create_match(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    all_users = conn.execute("SELECT * FROM users").fetchall()
 
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users;")
-        all_users = cur.fetchall()
-    
-    user = next((u for u in all_users if u["id"] == user_id), None)
+    db_user = next((item for item in all_users if item["id"] == user["id"]), None)
 
-    if user is None:
+    if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    candidates = [u for u in all_users if u["id"] != user_id]
-    best_user = find_match(user, candidates, conn)
+
+    best_user = find_match(conn, db_user, all_users)
 
     if best_user is None:
-        raise HTTPException(status_code=409, detail="No available match found for this user")
+        raise HTTPException(status_code=409, detail="No available match found")
 
-    match = store_match(user, best_user, conn)  # saved match form the database
-
-    return {"match": match}
+    return {"match": store_match(db_user, best_user, conn)}

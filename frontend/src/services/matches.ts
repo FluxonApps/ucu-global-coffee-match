@@ -32,8 +32,7 @@ export async function getMatchHistory(): Promise<MatchHistoryEntry[]> {
 }
 
 export async function getMatches(): Promise<Match[]> {
-  // TODO(backend): GET /matches
-  return MOCK_MATCHES;
+  return apiFetch<Match[]>('/matches');
 }
 
 type UserProfileResponse = {

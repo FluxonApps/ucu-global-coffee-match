@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, ExternalLink, Users } from 'lucide-react';
+import { ArrowRight, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -9,20 +9,68 @@ import { useProfileDetails } from '../context/useProfileDetails.ts';
 import { getMatchHistory } from '../services/matches.ts';
 import type { MatchHistoryEntry } from '../services/matches.ts';
 
+import { useAuth } from '../context/useAuth.ts';
+import { ApiError, apiFetch } from '../lib/api.ts';
+
 const MatchesPage = () => {
   const { details } = useProfileDetails();
   const isReady = details.interests.length > 0;
 
   const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
 
+  const { user } = useAuth();
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchError, setMatchError] = useState('');
+
   useEffect(() => {
     void getMatchHistory().then(setHistory);
   }, []);
 
+  const handleFindMatch = async () => {
+  if (!user) return;
+
+  setIsMatching(true);
+  setMatchError('');
+
+  try {
+    await apiFetch('/matches/create', {
+      method: 'POST',
+    });
+
+    // Reload the list so the newly created match appears.
+    const updatedHistory = await getMatchHistory();
+    setHistory(updatedHistory);
+  } catch (error) {
+    setMatchError(
+      error instanceof ApiError
+        ? error.message
+        : 'Could not create a match. Please try again.',
+    );
+  } finally {
+    setIsMatching(false);
+  }
+};
+
   return (
     <div className="min-h-screen bg-background pt-14">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-medium mb-6 font-display">Matches</h1>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-medium font-display">Matches</h1>
+
+          {isReady && (
+            <Btn
+              variant="primary"
+              size="md"
+              onClick={handleFindMatch}
+              disabled={isMatching}
+            >
+              <Coffee size={14} />
+              {isMatching ? 'Finding match...' : 'Find a coffee match'}
+            </Btn>
+          )}
+        </div>
+
+        {matchError && <p className="mb-4 text-sm text-destructive">{matchError}</p>}
 
         {!isReady && (
           <div className="max-w-md mb-8">
