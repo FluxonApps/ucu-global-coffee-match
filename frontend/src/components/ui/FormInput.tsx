@@ -9,6 +9,7 @@ interface FormInputProps {
   required?: boolean;
   options?: string[];
   hint?: string;
+  minLength?: number;
 }
 
 export const FormInput = ({ label, type = 'text', value, onChange, placeholder, required = false, options, hint }: FormInputProps) => {
