@@ -74,7 +74,7 @@ export const ProfileDetailsProvider = ({ children }: { children: ReactNode }) =>
     };
 
     loadProfile();
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <ProfileDetailsContext.Provider value={{ details, setDetails }}>

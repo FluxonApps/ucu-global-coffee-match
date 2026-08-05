@@ -43,8 +43,23 @@ PROFILE_COLUMNS = """
 
 
 @router.get("/me")
-def get_profile(user: CurrentUser):
-    return user
+def get_profile(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    row = conn.execute(
+        f"""
+        SELECT {PROFILE_COLUMNS}
+        FROM users
+        WHERE id = %s
+        """,
+        (user["id"],),
+    ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return row
 
 
 @router.patch("/me")
