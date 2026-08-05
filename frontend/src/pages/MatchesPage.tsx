@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -133,6 +133,19 @@ const MatchesPage = () => {
                         <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
                           <Clock size={11} /> {matchedAt}
                         </span>
+                        {match.recommended_time ? (
+                          <div className="flex max-w-56 items-start gap-1 text-right text-xs text-muted-foreground">
+                            <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
+                            <span>
+                              <span className="block">Your time: {match.recommended_time.user_local.display}</span>
+                              <span className="block">
+                                Their time: {match.recommended_time.match_local.display}
+                              </span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No common available hour</span>
+                        )}
                         <Link to={`/profile/${match.colleague.id}`}>
                           <Btn variant="outline" size="sm">
                             <ExternalLink size={12} /> View Profile

@@ -4,7 +4,7 @@ import psycopg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, matches, users
+from app.api import auth, availability, matches, users
 from app.db import get_connection
 from app.settings import settings
 
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(matches.router)
+app.include_router(availability.router)
 
 
 @app.get("/health")
