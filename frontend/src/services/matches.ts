@@ -74,6 +74,11 @@ const toColleague = (row: UserProfileResponse): Colleague => ({
   frequency: '',
 });
 
+export async function getAllColleagues(): Promise<Colleague[]> {
+  const rows = await apiFetch<UserProfileResponse[]>('/users');
+  return rows.map(toColleague);
+}
+
 export async function getColleague(id: string): Promise<Colleague | undefined> {
   try {
     const row = await apiFetch<UserProfileResponse>(`/users/${id}`);

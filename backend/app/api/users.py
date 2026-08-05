@@ -127,6 +127,27 @@ def set_availability(
     return {"status": "ok"}
 
 
+@router.get("")
+def list_users(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    """List all colleagues (everyone except the current user)."""
+    rows = conn.execute(
+        """
+        SELECT id, first_name, last_name, email, avatar_url,
+               role_title, department, timezone, bio,
+               personal_interests, skills, languages
+        FROM users
+        WHERE id != %s
+        ORDER BY first_name, last_name
+        """,
+        (user["id"],),
+    ).fetchall()
+
+    return rows
+
+
 @router.get("/{user_id}")
 def get_user_profile(user_id: int, conn: psycopg.Connection = Depends(get_db)):
     row = conn.execute(

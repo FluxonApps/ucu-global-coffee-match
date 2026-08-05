@@ -1,4 +1,4 @@
-import { Coffee, LogOut, User, Users, X } from 'lucide-react';
+import { Coffee, LogOut, User, Users, UsersRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 
@@ -6,6 +6,7 @@ import { useAuth } from '../../context/useAuth.ts';
 
 const NAV_ITEMS = [
   { to: '/matches', label: 'Matches', icon: Users },
+  { to: '/colleagues', label: 'All Colleagues', icon: UsersRound },
   { to: '/profile', label: 'Profile', icon: User },
 ];
 
