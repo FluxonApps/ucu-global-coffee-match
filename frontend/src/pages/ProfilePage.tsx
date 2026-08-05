@@ -149,14 +149,17 @@ const ProfilePage = () => {
     setIsSaving(true);
 
     try {
-      await updateProfile({
+      const updatedUser = await updateProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         timezone,
         personal_interests: local.interests,
       });
-
-      setDetails(local);
+      
+      setDetails({
+        ...local,
+        interests: updatedUser.personal_interests ?? local.interests,
+      });
 
       setSaved(true);
 

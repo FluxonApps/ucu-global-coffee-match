@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 
 import { apiFetch } from '../lib/api.ts';
@@ -22,7 +22,7 @@ export type AuthContextValue = {
     fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>> & {
       personal_interests?: string[];
     },
-  ) => Promise<void>;
+  ) => Promise<User & { personal_interests?: string[] }>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -60,13 +60,34 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setUser(null);
   };
 
-  const updateProfile = async (fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>>) => {
-    const updatedUser = await apiFetch<User>('/users/me', {
+  type ProfileUpdate = Partial<
+    Pick<User, 'first_name' | 'last_name' | 'timezone'>
+  > & {
+    personal_interests?: string[];
+  };
+
+  const updateProfile = async (fields: ProfileUpdate) => {
+    const updatedUser = await apiFetch<User & {
+      personal_interests?: string[];
+    }>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(fields),
     });
+  
     setUser(updatedUser);
+  
+    return updatedUser;
   };
+  
+  return <AuthContext.Provider value={{ user, loading, register, login, logout, updateProfile }}>{children}</AuthContext.Provider>;
+};
 
-  return <AuthContext value={{ user, loading, register, login, logout, updateProfile }}>{children}</AuthContext>;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
 };
