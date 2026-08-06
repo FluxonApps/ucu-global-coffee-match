@@ -32,10 +32,43 @@ class MatchCreateRequest(BaseModel):
   group_size: int | None = Field(default=None, ge=3, le=10)
 
 
+def format_recommended_time(recommended_time: str | dict | None) -> str | None:
+  """Форматує рекомендований час із dict/str у відформатований Markdown для Slack."""
+  if not recommended_time:
+    return None
+
+  if isinstance(recommended_time, str):
+    return recommended_time
+
+  if isinstance(recommended_time, dict):
+    user_local = recommended_time.get("user_local", {})
+    match_local = recommended_time.get("match_local", {})
+
+    user_disp = user_local.get("display")
+    user_tz = user_local.get("timezone")
+
+    match_disp = match_local.get("display")
+    match_tz = match_local.get("timezone")
+
+    if user_disp:
+      text = f"*{user_disp}*"
+      if user_tz:
+        text += f" ({user_tz})"
+      # Якщо часові пояси різняться, додаємо час партнера
+      if match_disp and match_tz and (user_tz != match_tz or user_disp != match_disp):
+        text += f" • Partner: {match_disp} ({match_tz})"
+      return text
+
+    if "utc" in recommended_time:
+      return f"*{recommended_time['utc']}*"
+
+  return str(recommended_time)
+
+
 def send_slack_match_notification(
   recipient_slack_id: str,
   partners_info: list[dict],
-  recommended_time: str | None,
+  recommended_time: str | dict | None,
   topics: list[str],
   is_group: bool = False,
 ):
@@ -98,14 +131,15 @@ def send_slack_match_notification(
     blocks.append(section_block)
     blocks.append({"type": "divider"})
 
-  # Recommended meeting time
-  if recommended_time:
+  # Recommended meeting time (Formatted)
+  formatted_time = format_recommended_time(recommended_time)
+  if formatted_time:
     blocks.append(
       {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": f"⏰ *Recommended Meeting Time:*\n{recommended_time}",
+          "text": f"⏰ *Recommended Meeting Time:*\n{formatted_time}",
         },
       }
     )
