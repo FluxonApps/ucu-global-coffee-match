@@ -74,11 +74,15 @@ const PublicProfilePage = () => {
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Star size={14} className="text-primary" /> Interests
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {colleague.interests.map((i) => (
-                <Tag key={i} label={i} active={mutual.has(i)} />
-              ))}
-            </div>
+            {colleague.interests.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {colleague.interests.map((i) => (
+                  <Tag key={i} label={i} active={mutual.has(i)} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No content</p>
+            )}
             {mutual.size > 0 && (
               <p className="text-xs text-muted-foreground mt-3">Highlighted interests are shared with you.</p>
             )}
@@ -108,19 +112,27 @@ const PublicProfilePage = () => {
         <div className="grid md:grid-cols-2 gap-4">
           <Card className="p-5">
             <h3 className="font-semibold mb-3">Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              {colleague.skills.map((s) => (
-                <Tag key={s} label={s} />
-              ))}
-            </div>
+            {colleague.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {colleague.skills.map((s) => (
+                  <Tag key={s} label={s} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No content</p>
+            )}
           </Card>
           <Card className="p-5">
             <h3 className="font-semibold mb-3">Languages</h3>
-            <div className="flex flex-wrap gap-2">
-              {colleague.languages.map((l) => (
-                <Tag key={l} label={l} />
-              ))}
-            </div>
+            {colleague.languages.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {colleague.languages.map((l) => (
+                  <Tag key={l} label={l} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No content</p>
+            )}
           </Card>
         </div>
       </div>
