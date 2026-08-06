@@ -40,19 +40,17 @@ import random
 import sys
 import threading
 
+# Add parent directory to sys.path to enable imports from 'app'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import db
 import uvicorn
+from app.services.topics import generate_conversation_topics
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from app.services.topics import generate_conversation_topics
-
-# Now import modules from app
-
-# Imports from app must come after sys.path update
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -329,7 +327,7 @@ def handle_login_submit(ack, body, client, view):
     client.chat_postMessage(channel=slack_user_id, text=message)
 
 
-@app.command("/mute-bot")
+@app.command("/mute")
 def handle_mute_command(ack, respond, command):
     """Pauses user availability for matching."""
     ack()
@@ -351,7 +349,7 @@ def handle_mute_command(ack, respond, command):
         respond(f"Failed to update availability status: {e}")
 
 
-@app.command("/unmute-bot")
+@app.command("/unmute")
 def handle_unmute_command(ack, respond, command):
     """Resumes user availability for matching."""
     ack()
@@ -406,6 +404,11 @@ def handle_first_open(event, client):
 
     welcomed_users.add(user_id)
     save_welcomed_users(welcomed_users)
+
+
+@app.event("message")
+def handle_message_events(body, logger):
+    """Silently handles general message events to suppress Slack 404 warning logs."""
 
 
 # FastAPI web app for Render health checks
