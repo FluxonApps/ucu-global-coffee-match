@@ -135,9 +135,20 @@ export const DAYS = [
   { key: 'Wed', label: 'Wednesday' },
   { key: 'Thu', label: 'Thursday' },
   { key: 'Fri', label: 'Friday' },
+  { key: 'Sat', label: 'Saturday' },
+  { key: 'Sun', label: 'Sunday' },
 ] as const;
 
 export const HOURS = [
+  { key: '00', label: '12:00', period: 'AM' },
+  { key: '01', label: '1:00', period: 'AM' },
+  { key: '02', label: '2:00', period: 'AM' },
+  { key: '03', label: '3:00', period: 'AM' },
+  { key: '04', label: '4:00', period: 'AM' },
+  { key: '05', label: '5:00', period: 'AM' },
+  { key: '06', label: '6:00', period: 'AM' },
+  { key: '07', label: '7:00', period: 'AM' },
+  { key: '08', label: '8:00', period: 'AM' },
   { key: '09', label: '9:00', period: 'AM' },
   { key: '10', label: '10:00', period: 'AM' },
   { key: '11', label: '11:00', period: 'AM' },
@@ -147,6 +158,12 @@ export const HOURS = [
   { key: '15', label: '3:00', period: 'PM' },
   { key: '16', label: '4:00', period: 'PM' },
   { key: '17', label: '5:00', period: 'PM' },
+  { key: '18', label: '6:00', period: 'PM' },
+  { key: '19', label: '7:00', period: 'PM' },
+  { key: '20', label: '8:00', period: 'PM' },
+  { key: '21', label: '9:00', period: 'PM' },
+  { key: '22', label: '10:00', period: 'PM' },
+  { key: '23', label: '11:00', period: 'PM' },
 ] as const;
 
 export const HOUR_LABELS: Record<string, string> = Object.fromEntries(HOURS.map((h) => [h.key, `${h.label} ${h.period}`]));
