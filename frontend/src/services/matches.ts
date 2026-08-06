@@ -10,14 +10,19 @@
 //   return apiFetch<Colleague>(`/colleagues/${id}`);
 //   return apiFetch<void>('/feedback', { method: 'POST', body: JSON.stringify(payload) });
 
-import { COLLEAGUES, MOCK_MATCHES } from '../data/mockMatches.ts';
 import { apiFetch, ApiError } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
-
 
 export type MatchHistoryEntry = {
   id: number;
   matched_at: string;
+  recommended_time: {
+    utc: string;
+    user_local: { timezone: string; display: string };
+    match_local: { timezone: string; display: string };
+    duration_minutes: number;
+  } | null;
+  conversation_topics: string[];
   colleague: {
     id: number;
     email: string;
@@ -29,6 +34,34 @@ export type MatchHistoryEntry = {
 
 export async function getMatchHistory(): Promise<MatchHistoryEntry[]> {
   return apiFetch<MatchHistoryEntry[]>('/matches/history');
+}
+
+export type CreateMatchResponse = {
+  match: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    timezone: string | null;
+    avatar_url: string;
+  };
+  match_record: {
+    user1_id: number;
+    user2_id: number;
+  };
+  recommended_time: MatchHistoryEntry['recommended_time'];
+  conversation_topics: string[];
+};
+
+export async function createMatch(): Promise<CreateMatchResponse> {
+  return apiFetch<CreateMatchResponse>('/matches/create', { method: 'POST' });
+}
+
+export async function createGroupMatch(groupSize: number): Promise<CreateMatchResponse> {
+  return apiFetch<CreateMatchResponse>('/matches/create', {
+    method: 'POST',
+    body: JSON.stringify({ match_type: 'group', group_size: groupSize }),
+  });
 }
 
 export async function getMatches(): Promise<Match[]> {
@@ -63,12 +96,16 @@ const toColleague = (row: UserProfileResponse): Colleague => ({
   skills: row.skills,
   interests: row.personal_interests,
   languages: row.languages,
-  topics: row.conversation_topics,
   availability: [],
   format: [],
   duration: '',
   frequency: '',
 });
+
+export async function getAllColleagues(): Promise<Colleague[]> {
+  const rows = await apiFetch<UserProfileResponse[]>('/users');
+  return rows.map(toColleague);
+}
 
 export async function getColleague(id: string): Promise<Colleague | undefined> {
   try {
