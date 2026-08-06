@@ -2,7 +2,11 @@ import json
 
 from google import genai
 from google.oauth2 import service_account
-
+import logging
+import os
+from google.oauth2 import service_account
+from google import genai
+from app.settings import settings
 from app.settings import settings
 
 _credentials = (
@@ -80,3 +84,30 @@ def _fallback_topics() -> list[str]:
         "Any good books, shows, or podcasts you'd recommend?",
         "What do you like to do outside of work?",
     ]
+
+
+logger = logging.getLogger(__name__)
+
+def get_credentials():
+    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or getattr(settings, "google_application_credentials", None)
+
+    if creds_path and os.path.exists(creds_path):
+        return service_account.Credentials.from_service_account_file(
+            creds_path,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+
+    logger.warning(f"Google credentials file not found at: {creds_path}")
+    return None
+
+def generate_conversation_topics(...) -> list[str]:
+    credentials = get_credentials()
+    if not credentials:
+        # Резервний список тем, якщо файл секретів відсутній
+        return [
+            "Які ваші улюблені хобі?",
+            "Про які проєкти вам найбільше подобається розповідати?",
+            "Як ви зазвичай проводите вільний час?"
+        ]
+
+    # Створення клієнта та генерація тем...
