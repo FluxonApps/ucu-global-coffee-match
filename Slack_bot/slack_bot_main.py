@@ -213,12 +213,6 @@ def pick_random_user(ack, respond, command, client):
         text=f"Random User: {chosen_user['first_name']} {chosen_user['last_name']}",
     )
 
-    if requester:
-        try:
-            db.record_match(requester["id"], chosen_user["id"], topics)
-        except Exception as e:
-            logging.warning(f"Failed to record match in database: {e}")
-
 
 @app.command("/smart-match")
 def handle_smart_match_command(ack, body, client, respond):
