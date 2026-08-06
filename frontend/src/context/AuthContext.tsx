@@ -21,8 +21,11 @@ export type AuthContextValue = {
   updateProfile: (
     fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>> & {
       personal_interests?: string[];
+      skills?: string[];
+      languages?: string[];
+      avatar_url?: string;
     },
-  ) => Promise<User & { personal_interests?: string[] }>;
+  ) => Promise<User & { personal_interests?: string[]; skills?: string[]; languages?: string[]; avatar_url?: string }>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,18 +66,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const updateProfile = async (
     fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>> & {
       personal_interests?: string[];
+      skills?: string[];
+      languages?: string[];
+      avatar_url?: string;
     },
   ) => {
     const updatedUser = await apiFetch<User>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(fields),
     });
-  
+
     setUser(updatedUser);
-  
+
     return updatedUser;
   };
-  
+
   return <AuthContext.Provider value={{ user, loading, register, login, logout, updateProfile }}>{children}</AuthContext.Provider>;
 };
 
