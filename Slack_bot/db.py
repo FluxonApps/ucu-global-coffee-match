@@ -113,24 +113,141 @@ def set_availability(slack_user_id: str, is_available: bool) -> None:
         conn.commit()
 
 
-def get_last_match_partner_id(user_db_id: int) -> int | None:
-    """
-    Повертає ID користувача, з яким user_db_id був заматчений
-    востаннє (щоб можна було уникати повторів двічі поспіль).
-    """
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-                SELECT user1_id, user2_id
-                FROM matches
-                WHERE user1_id = %s OR user2_id = %s
-                ORDER BY matched_at DESC
-                LIMIT 1
-                """,
-            (user_db_id, user_db_id),
-        )
-        row = cur.fetchone()
-        if not row:
+def get_last_match_partner_id(user_db_id: int):
+    """Повертає ID останнього партнера, з яким був зметчений користувач."""
+    with get_connection() as conn:  # або ваш спосіб отримання коннекту/курсора
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT mp_partner.user_id
+                FROM matches m
+                JOIN match_participants mp ON m.id = mp.match_id
+                JOIN match_participants mp_partner
+                    ON m.id = mp_partner.match_id
+                   AND mp_partner.user_id != %s
+                WHERE mp.user_id = %s
+                ORDER BY m.matched_at DESC
+                LIMIT 1;
+            """,
+                (user_db_id, user_db_id),
+            )
+            row = cur.fetchone()
+            if row:
+                return row[0]  # або row["user_id"], залежно від типу курсора
             return None
-        user1_id, user2_id = row
-        return user2_id if user1_id == user_db_id else user1_id
+
+
+import random
+
+from app.db import get_connection  # або ваша функція підключення
+
+
+def find_best_match_for_user(requester_id: int) -> dict | None:
+    """Знаходить найкращого співрозмовника на основі спільних характеристик."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # 1. Отримуємо дані запитувача
+            cur.execute(
+                """
+                SELECT id, personal_interests, skills, languages
+                FROM users
+                WHERE id = %s
+            """,
+                (requester_id,),
+            )
+            req_user = cur.fetchone()
+            if not req_user:
+                return None
+
+            req_interests = set(req_user.get("personal_interests") or [])
+            req_skills = set(req_user.get("skills") or [])
+            req_languages = set(req_user.get("languages") or [])
+
+            # Отримуємо ID останнього партнера, щоб не з'єднувати з ним повторно поспіль
+            last_partner_id = get_last_match_partner_id(requester_id)
+
+            # 2. Отримуємо всіх доступних кандидатів
+            cur.execute(
+                """
+                SELECT id, first_name, last_name, slack_user_id, personal_interests, skills, languages, bio
+                FROM users
+                WHERE is_available = true
+                  AND id != %s
+                  AND (%s::int IS NULL OR id != %s)
+            """,
+                (requester_id, last_partner_id, last_partner_id),
+            )
+            candidates = cur.fetchall()
+
+            if not candidates:
+                return None
+
+            # 3. Розраховуємо шар схожості (Match Score) для кожного кандидата
+            scored_candidates = []
+            for cand in candidates:
+                cand_interests = set(cand.get("personal_interests") or [])
+                cand_skills = set(cand.get("skills") or [])
+                cand_languages = set(cand.get("languages") or [])
+
+                # Ваги для порівняння
+                shared_interests = req_interests.intersection(cand_interests)
+                shared_skills = req_skills.intersection(cand_skills)
+                shared_languages = req_languages.intersection(cand_languages)
+
+                # Очки схожості:
+                # - Спільні інтереси: 3 бали за кожен
+                # - Спільні навички: 2 бали за кожну
+                # - Спільна мова: 1 бал за кожну
+                score = (
+                    (len(shared_interests) * 3)
+                    + (len(shared_skills) * 2)
+                    + (len(shared_languages) * 1)
+                )
+
+                scored_candidates.append(
+                    {
+                        "candidate": cand,
+                        "score": score,
+                        "shared_interests": list(shared_interests),
+                        "shared_skills": list(shared_skills),
+                    }
+                )
+
+            # Сортуємо кандидатів за кількістю балів (найвищий рейтинг першим)
+            scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+
+            # Якщо є кілька кандидатів з однаковим високим балом — вибираємо випадкового з них
+            top_score = scored_candidates[0]["score"]
+            top_candidates = [c for c in scored_candidates if c["score"] == top_score]
+
+            selected = random.choice(top_candidates)
+            return selected
+
+
+def create_smart_match(
+    user1_id: int, user2_id: int, conversation_topics: list[str]
+) -> int:
+    """Створює запис матчу та додає учасників у таблицю match_participants."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Створюємо матч
+            cur.execute(
+                """
+                INSERT INTO matches (match_type, status, conversation_topics, matched_at)
+                VALUES ('one_to_one', 'created', %s, NOW())
+                RETURNING id;
+            """,
+                (conversation_topics,),
+            )
+            match_id = cur.fetchone()[0]
+
+            # Додаємо учасників
+            cur.execute(
+                """
+                INSERT INTO match_participants (match_id, user_id)
+                VALUES (%s, %s), (%s, %s);
+            """,
+                (match_id, user1_id, match_id, user2_id),
+            )
+            conn.commit()
+            return match_id

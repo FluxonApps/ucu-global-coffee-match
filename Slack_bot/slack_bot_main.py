@@ -380,3 +380,71 @@ if __name__ == "__main__":
     # Запускаємо Slack Socket Mode
     handler = SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
     handler.start()
+
+from app.services.topics import generate_conversation_topics
+
+from Slack_bot import db
+
+
+@app.command("/smart-match")  # Назва вашої Slack-команди
+def handle_smart_match_command(ack, body, client, respond):
+    ack()
+
+    slack_user_id = body["user_id"]
+
+    # Отримуємо користувача з бази за його Slack ID
+    requester = db.get_user_by_slack_id(slack_user_id)
+    if not requester:
+        respond(
+            "❌ Ваш профіль не знайдено в системі. Зареєструйтеся або прив'яжіть"
+            " Slack у своєму профілі."
+        )
+        return
+
+    # Шукаємо найкращого кандидата
+    match_result = db.find_best_match_for_user(requester["id"])
+
+    if not match_result:
+        respond("😔 Наразі не знайдено доступних колег для підбору. Спробуйте пізніше!")
+        return
+
+    partner = match_result["candidate"]
+    shared_interests = match_result["shared_interests"]
+
+    # Генеруємо теми для розмови через Gemini (функція з services/topics.py)
+    topics = generate_conversation_topics(requester, partner)
+
+    # Зберігаємо матч у базі даних
+    match_id = db.create_smart_match(requester["id"], partner["id"], topics)
+
+    # Відформатований список тем для повідомлення
+    topics_formatted = "\n".join([f"• {t}" for t in topics])
+    shared_info = (
+        f"\n🤝 *Спільні інтереси:* {', '.join(shared_interests)}"
+        if shared_interests
+        else ""
+    )
+
+    # 1. Надсилаємо сповіщення ініціатору
+    respond(
+        f"🎉 *Ми знайшли для вас ідеальний match на каву!*\n\n"
+        f"👤 *Ваш співрозмовник:* <@{partner['slack_user_id']}> ({partner.get('first_name', '')} {partner.get('last_name', '')})\n"
+        f"{shared_info}\n\n"
+        f"💡 *Запропоновані теми для розмови:*\n{topics_formatted}\n\n"
+        f"Напишіть колезі в приватні повідомлення та узгодьте зручний час для кави! ☕"
+    )
+
+    # 2. Надсилаємо сповіщення партнеру
+    try:
+        client.chat_postMessage(
+            channel=partner["slack_user_id"],
+            text=(
+                f"👋 Вітаємо! Колега <@{slack_user_id}> хоче зустрітися з вами на"
+                f" каву!\n\n"
+                f"{shared_info}\n\n"
+                f"💡 *Ідеї для початку розмови:*\n{topics_formatted}\n\n"
+                f"Очікуйте на повідомлення в приват! ☕"
+            ),
+        )
+    except Exception as e:
+        print(f"Не вдалося надіслати Slack-повідомлення партнеру: {e}")
