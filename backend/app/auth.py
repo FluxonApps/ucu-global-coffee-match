@@ -4,7 +4,7 @@ from typing import Annotated
 
 import bcrypt
 import psycopg
-from fastapi import Cookie, Depends, HTTPException, Response, status
+from fastapi import Cookie, Depends, Header, HTTPException, Response, status
 
 from app.db import get_db
 
@@ -36,8 +36,8 @@ def set_session_cookie(response: Response, token: str, expires_at: datetime) -> 
     key=SESSION_COOKIE_NAME,
     value=token,
     httponly=True,
-    secure=True,  # Повинно бути True для SameSite=none
-    samesite="none",  # Дозволяє передавати куку між різними доменами
+    secure=True,
+    samesite="none",
     expires=expires_at,
     path="/",
   )
@@ -54,20 +54,32 @@ def clear_session_cookie(response: Response) -> None:
 
 
 def get_current_user(
-  session_token: Annotated[str | None, Cookie()] = None,
+  session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
+  authorization: Annotated[str | None, Header()] = None,
   conn: psycopg.Connection = Depends(get_db),
 ) -> dict:
-  if not session_token:
+  # 1. Визначити токен: з Cookie або з заголовка Authorization
+  token = session_token
+
+  if not token and authorization:
+    if authorization.startswith("Bearer "):
+      token = authorization.split(" ")[1]
+    else:
+      token = authorization
+
+  # 2. Якщо токена немає ніде — 401
+  if not token:
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
 
+  # 3. Перевірка токена в БД
   row = conn.execute(
     """
-    SELECT users.id, users.email, users.first_name, users.last_name, users.timezone
-    FROM sessions
-    JOIN users ON users.id = sessions.user_id
-    WHERE sessions.token = %s AND sessions.expires_at > now()
-    """,
-    (session_token,),
+        SELECT users.id, users.email, users.first_name, users.last_name, users.timezone
+        FROM sessions
+        JOIN users ON users.id = sessions.user_id
+        WHERE sessions.token = %s AND sessions.expires_at > now()
+        """,
+    (token,),
   ).fetchone()
 
   if row is None:
