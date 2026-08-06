@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 from contextlib import contextmanager
 
 import psycopg2
@@ -32,9 +33,6 @@ def get_registered_users(exclude_slack_id: str | None = None) -> list[dict]:
     """
     Повертає список усіх зареєстрованих користувачів, які прив'язали
     свій Slack-акаунт (slack_user_id IS NOT NULL).
-
-    exclude_slack_id — опційно виключити конкретного користувача
-    (наприклад, того, хто викликав команду, щоб не вибрало самого себе).
     """
     query = """
         SELECT id, first_name, last_name, email, avatar_url,
@@ -66,18 +64,28 @@ def get_user_by_slack_id(slack_user_id: str) -> dict | None:
             return cur.fetchone()
 
 
-def record_match(user1_db_id: int, user2_db_id: int) -> None:
-    """Записує новий метч у таблицю matches."""
+def record_match(user1_db_id: int, user2_db_id: int) -> int:
+    """Записує новий метч у таблицю matches та додає учасників у match_participants."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO matches (user1_id, user2_id, status)
-                VALUES (%s, %s, 'created')
+                INSERT INTO matches (match_type, status, matched_at)
+                VALUES ('one_to_one', 'created', NOW())
+                RETURNING id;
+                """
+            )
+            match_id = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                INSERT INTO match_participants (match_id, user_id)
+                VALUES (%s, %s), (%s, %s);
                 """,
-                (user1_db_id, user2_db_id),
+                (match_id, user1_db_id, match_id, user2_db_id),
             )
         conn.commit()
+        return match_id
 
 
 def link_slack_account(user_id: int, slack_user_id: str) -> None:
@@ -113,10 +121,10 @@ def set_availability(slack_user_id: str, is_available: bool) -> None:
         conn.commit()
 
 
-def get_last_match_partner_id(user_db_id: int):
+def get_last_match_partner_id(user_db_id: int) -> int | None:
     """Повертає ID останнього партнера, з яким був зметчений користувач."""
-    with get_connection() as conn:  # або ваш спосіб отримання коннекту/курсора
-        with conn.cursor() as cur:
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
                 SELECT mp_partner.user_id
@@ -128,31 +136,24 @@ def get_last_match_partner_id(user_db_id: int):
                 WHERE mp.user_id = %s
                 ORDER BY m.matched_at DESC
                 LIMIT 1;
-            """,
+                """,
                 (user_db_id, user_db_id),
             )
             row = cur.fetchone()
-            if row:
-                return row[0]  # або row["user_id"], залежно від типу курсора
-            return None
-
-
-import random
-
-from app.db import get_connection  # або ваша функція підключення
+            return row["user_id"] if row else None
 
 
 def find_best_match_for_user(requester_id: int) -> dict | None:
     """Знаходить найкращого співрозмовника на основі спільних характеристик."""
     with get_connection() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             # 1. Отримуємо дані запитувача
             cur.execute(
                 """
                 SELECT id, personal_interests, skills, languages
                 FROM users
                 WHERE id = %s
-            """,
+                """,
                 (requester_id,),
             )
             req_user = cur.fetchone()
@@ -166,15 +167,17 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
             # Отримуємо ID останнього партнера, щоб не з'єднувати з ним повторно поспіль
             last_partner_id = get_last_match_partner_id(requester_id)
 
-            # 2. Отримуємо всіх доступних кандидатів
+            # 2. Отримуємо всіх доступних кандидатів з заповненим slack_user_id
             cur.execute(
                 """
-                SELECT id, first_name, last_name, slack_user_id, personal_interests, skills, languages, bio
+                SELECT id, first_name, last_name, slack_user_id, personal_interests,
+                       skills, languages, bio, role_title, department
                 FROM users
                 WHERE is_available = true
+                  AND slack_user_id IS NOT NULL
                   AND id != %s
                   AND (%s::int IS NULL OR id != %s)
-            """,
+                """,
                 (requester_id, last_partner_id, last_partner_id),
             )
             candidates = cur.fetchall()
@@ -182,22 +185,18 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
             if not candidates:
                 return None
 
-            # 3. Розраховуємо шар схожості (Match Score) для кожного кандидата
+            # 3. Розраховуємо бал схожості (Match Score) для кожного кандидата
             scored_candidates = []
             for cand in candidates:
                 cand_interests = set(cand.get("personal_interests") or [])
                 cand_skills = set(cand.get("skills") or [])
                 cand_languages = set(cand.get("languages") or [])
 
-                # Ваги для порівняння
                 shared_interests = req_interests.intersection(cand_interests)
                 shared_skills = req_skills.intersection(cand_skills)
                 shared_languages = req_languages.intersection(cand_languages)
 
-                # Очки схожості:
-                # - Спільні інтереси: 3 бали за кожен
-                # - Спільні навички: 2 бали за кожну
-                # - Спільна мова: 1 бал за кожну
+                # Очки схожості
                 score = (
                     (len(shared_interests) * 3)
                     + (len(shared_skills) * 2)
@@ -206,7 +205,7 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
 
                 scored_candidates.append(
                     {
-                        "candidate": cand,
+                        "candidate": dict(cand),
                         "score": score,
                         "shared_interests": list(shared_interests),
                         "shared_skills": list(shared_skills),
@@ -216,12 +215,10 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
             # Сортуємо кандидатів за кількістю балів (найвищий рейтинг першим)
             scored_candidates.sort(key=lambda x: x["score"], reverse=True)
 
-            # Якщо є кілька кандидатів з однаковим високим балом — вибираємо випадкового з них
             top_score = scored_candidates[0]["score"]
             top_candidates = [c for c in scored_candidates if c["score"] == top_score]
 
-            selected = random.choice(top_candidates)
-            return selected
+            return random.choice(top_candidates)
 
 
 def create_smart_match(
@@ -230,23 +227,21 @@ def create_smart_match(
     """Створює запис матчу та додає учасників у таблицю match_participants."""
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Створюємо матч
             cur.execute(
                 """
                 INSERT INTO matches (match_type, status, conversation_topics, matched_at)
                 VALUES ('one_to_one', 'created', %s, NOW())
                 RETURNING id;
-            """,
+                """,
                 (conversation_topics,),
             )
             match_id = cur.fetchone()[0]
 
-            # Додаємо учасників
             cur.execute(
                 """
                 INSERT INTO match_participants (match_id, user_id)
                 VALUES (%s, %s), (%s, %s);
-            """,
+                """,
                 (match_id, user1_id, match_id, user2_id),
             )
             conn.commit()
