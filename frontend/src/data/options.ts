@@ -118,15 +118,30 @@ export const DEPARTMENT_OPTIONS = [
 ];
 
 export const TIMEZONE_OPTIONS = [
+  'SST (UTC-11)',
+  'HST (UTC-10)',
+  'AKST (UTC-9)',
   'PST (UTC-8)',
   'MST (UTC-7)',
   'CST (UTC-6)',
   'EST (UTC-5)',
+  'AST (UTC-4)',
+  'ART (UTC-3)',
+  'FNT (UTC-2)',
+  'AZOT (UTC-1)',
   'GMT (UTC+0)',
   'CET (UTC+1)',
   'EET (UTC+2)',
+  'MSK (UTC+3)',
+  'GST (UTC+4)',
+  'PKT (UTC+5)',
   'IST (UTC+5:30)',
+  'BST (UTC+6)',
+  'ICT (UTC+7)',
+  'CST-China (UTC+8)',
   'JST (UTC+9)',
+  'AEST (UTC+10)',
+  'NZST (UTC+12)',
 ];
 
 export const DAYS = [
