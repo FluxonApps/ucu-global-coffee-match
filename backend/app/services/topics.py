@@ -1,10 +1,25 @@
 import json
 
 from google import genai
+from google.oauth2 import service_account
 
 from app.settings import settings
 
-_client = genai.Client(api_key=settings.gemini_api_key)
+_credentials = (
+    service_account.Credentials.from_service_account_file(
+        settings.google_application_credentials,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+    if settings.google_application_credentials
+    else None
+)
+
+_client = genai.Client(
+    vertexai=True,
+    project=settings.gemini_project_id,
+    location=settings.gemini_location,
+    credentials=_credentials,
+)
 
 SYSTEM_PROMPT = """You are an assistant for a corporate "coffee chat" matching app.
 Given the interests of two colleagues who have just been matched for a coffee chat,
