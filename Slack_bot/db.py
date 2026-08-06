@@ -11,7 +11,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Отримуємо URL та автоматично виправляємо префікс для Render
+# Fetch database URL and fix PostgreSQL prefix for Render deployment if needed
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -19,7 +19,7 @@ if DATABASE_URL.startswith("postgres://"):
 
 @contextmanager
 def get_connection():
-    """Контекстний менеджер для з'єднання з базою — гарантує закриття."""
+    """Context manager for database connection — ensures proper closure."""
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL environment variable is not set")
     conn = psycopg2.connect(DATABASE_URL)
@@ -31,8 +31,8 @@ def get_connection():
 
 def get_registered_users(exclude_slack_id: str | None = None) -> list[dict]:
     """
-    Повертає список усіх зареєстрованих користувачів, які прив'язали
-    свій Slack-акаунт (slack_user_id IS NOT NULL).
+    Returns a list of all registered users who linked their Slack account
+    (slack_user_id IS NOT NULL) and are available.
     """
     query = """
         SELECT id, first_name, last_name, email, avatar_url,
@@ -54,7 +54,7 @@ def get_registered_users(exclude_slack_id: str | None = None) -> list[dict]:
 
 
 def get_user_by_slack_id(slack_user_id: str) -> dict | None:
-    """Повертає одного користувача за його slack_user_id (або None)."""
+    """Returns a single user by their slack_user_id (or None if not found)."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -65,7 +65,7 @@ def get_user_by_slack_id(slack_user_id: str) -> dict | None:
 
 
 def record_match(user1_db_id: int, user2_db_id: int) -> int:
-    """Записує новий метч у таблицю matches та додає учасників у match_participants."""
+    """Records a new match in the matches table and adds participants to match_participants."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -89,7 +89,7 @@ def record_match(user1_db_id: int, user2_db_id: int) -> int:
 
 
 def link_slack_account(user_id: int, slack_user_id: str) -> None:
-    """Прив'язує Slack-акаунт до користувача (записує slack_user_id)."""
+    """Links Slack account to user by setting their slack_user_id."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -100,7 +100,7 @@ def link_slack_account(user_id: int, slack_user_id: str) -> None:
 
 
 def get_user_by_code(code: str) -> dict | None:
-    """Повертає користувача за реєстраційним кодом (verification_code) або None."""
+    """Returns a user by their registration code (verification_code) or None."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -111,7 +111,7 @@ def get_user_by_code(code: str) -> dict | None:
 
 
 def set_availability(slack_user_id: str, is_available: bool) -> None:
-    """Вмикає/вимикає участь користувача у вибірці /random_user."""
+    """Enables/disables user availability for matching (used by /mute and /unmute commands)."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -122,7 +122,7 @@ def set_availability(slack_user_id: str, is_available: bool) -> None:
 
 
 def get_last_match_partner_id(user_db_id: int) -> int | None:
-    """Повертає ID останнього партнера, з яким був зметчений користувач."""
+    """Returns the user ID of the last partner the user was matched with."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -144,10 +144,10 @@ def get_last_match_partner_id(user_db_id: int) -> int | None:
 
 
 def find_best_match_for_user(requester_id: int) -> dict | None:
-    """Знаходить найкращого співрозмовника на основі спільних характеристик."""
+    """Finds the best matching user based on shared interests, skills, and languages."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # 1. Отримуємо дані запитувача
+            # 1. Get requester profile details
             cur.execute(
                 """
                 SELECT id, personal_interests, skills, languages
@@ -164,10 +164,10 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
             req_skills = set(req_user.get("skills") or [])
             req_languages = set(req_user.get("languages") or [])
 
-            # Отримуємо ID останнього партнера, щоб не з'єднувати з ним повторно поспіль
+            # Get the ID of the previous match partner to avoid consecutive matching
             last_partner_id = get_last_match_partner_id(requester_id)
 
-            # 2. Отримуємо всіх доступних кандидатів з заповненим slack_user_id
+            # 2. Retrieve all available candidate users with linked Slack IDs
             cur.execute(
                 """
                 SELECT id, first_name, last_name, slack_user_id, personal_interests,
@@ -185,7 +185,7 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
             if not candidates:
                 return None
 
-            # 3. Розраховуємо бал схожості (Match Score) для кожного кандидата
+            # 3. Calculate match score for each candidate
             scored_candidates = []
             for cand in candidates:
                 cand_interests = set(cand.get("personal_interests") or [])
@@ -196,7 +196,7 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
                 shared_skills = req_skills.intersection(cand_skills)
                 shared_languages = req_languages.intersection(cand_languages)
 
-                # Очки схожості
+                # Similarity scoring algorithm
                 score = (
                     (len(shared_interests) * 3)
                     + (len(shared_skills) * 2)
@@ -212,7 +212,7 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
                     }
                 )
 
-            # Сортуємо кандидатів за кількістю балів (найвищий рейтинг першим)
+            # Sort candidates by score descending
             scored_candidates.sort(key=lambda x: x["score"], reverse=True)
 
             top_score = scored_candidates[0]["score"]
@@ -224,7 +224,7 @@ def find_best_match_for_user(requester_id: int) -> dict | None:
 def create_smart_match(
     user1_id: int, user2_id: int, conversation_topics: list[str]
 ) -> int:
-    """Створює запис матчу та додає учасників у таблицю match_participants."""
+    """Creates a match record and adds participants to the match_participants table."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
