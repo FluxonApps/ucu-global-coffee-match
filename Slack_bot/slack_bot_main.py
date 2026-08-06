@@ -37,6 +37,7 @@ import json
 import logging
 import os
 import random
+import sys
 import threading
 
 import db
@@ -47,6 +48,10 @@ from fastapi import FastAPI
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
+# Add project root directory to Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Imports from app must come after sys.path update
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
