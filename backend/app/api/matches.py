@@ -1,8 +1,7 @@
-# backend/app/api/matches.py
 from fastapi import APIRouter, Depends
 
-from app.api.auth import get_current_user  # або ваш залежний модуль авторизації
 from app.db import get_connection
+from app.dependencies import get_current_user  # <-- Вкажіть правильний шлях до вашої функції
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
