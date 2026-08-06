@@ -156,6 +156,9 @@ const ProfilePage = () => {
         last_name: lastName.trim(),
         timezone,
         personal_interests: local.interests,
+        skills: local.skills,
+        languages: local.languages,
+        avatar_url: local.photoUrl,
       });
 
       await apiFetch('/users/me/availability', {
@@ -171,7 +174,7 @@ const ProfilePage = () => {
           }),
         ),
       });
-      
+
       setDetails({
         ...local,
         interests: updatedUser.personal_interests ?? local.interests,
