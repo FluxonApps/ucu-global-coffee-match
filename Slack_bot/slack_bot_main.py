@@ -37,12 +37,14 @@ import os
 import sys
 from pathlib import Path
 
-# Встановлюємо шлях до кореня проєкту в першу чергу
-ROOT_DIR = Path(__file__).resolve().parent.parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+# Вказуємо шлях до папки backend і додаємо її в sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = BASE_DIR / "backend"
 
-# Тільки після цього робимо всі інші імпорти
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+# Всі інші імпорти мають іти ПІСЛЯ коду вище
 import json
 import logging
 import random
