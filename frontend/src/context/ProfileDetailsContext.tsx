@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import type { ProfileDetails } from '../types/coffeeMatch.ts';
 import { apiFetch } from '../lib/api.ts';
+import { DAYS } from '../data/options.ts';
 import { useAuth } from './AuthContext.tsx';
 
 export interface ProfileDetailsContextValue {
@@ -52,6 +53,22 @@ export const ProfileDetailsProvider = ({ children }: { children: ReactNode }) =>
           languages?: string[];
         }>('/users/me');
 
+        const availabilityRows = await apiFetch<
+          { day_of_week: number; hour_slot: number; available: boolean }[]
+        >('/users/me/availability').catch((fetchError) => {
+          console.error('Failed to load availability:', fetchError);
+          return [];
+        });
+
+        const availability = availabilityRows
+          .filter((row) => row.available)
+          .flatMap((row) => {
+            const day = DAYS[row.day_of_week]?.key;
+            if (!day) return [];
+            const hour = String(row.hour_slot).padStart(2, '0');
+            return [`${day}-${hour}`];
+          });
+
         setDetails({
           role: profile.role_title ?? '',
           department: profile.department ?? '',
@@ -61,7 +78,7 @@ export const ProfileDetailsProvider = ({ children }: { children: ReactNode }) =>
           skills: profile.skills ?? [],
           interests: profile.personal_interests ?? [],
           languages: profile.languages ?? [],
-          availability: [],
+          availability,
           format: [],
           duration: '',
           frequency: '',
