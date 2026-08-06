@@ -117,7 +117,9 @@ def resolve_avatar_url(client, db_user: dict) -> str:
     return avatar_url
 
 
-def build_user_card_blocks(client, db_user: dict, topics: list[str] | None = None) -> list[dict]:
+def build_user_card_blocks(
+    client, db_user: dict, topics: list[str] | None = None
+) -> list[dict]:
     """Generates Block Kit payload with profile picture, interests and conversation topics."""
     full_name = f"{db_user['first_name']} {db_user['last_name']}".strip()
     slack_id = db_user["slack_user_id"]
@@ -212,6 +214,11 @@ def pick_random_user(ack, respond, command, client):
         blocks=blocks,
         text=f"Random User: {chosen_user['first_name']} {chosen_user['last_name']}",
     )
+    if requester:
+        try:
+            db.record_match(requester["id"], chosen_user["id"], topics)
+        except Exception as e:
+            logging.warning(f"Failed to record match in database: {e}")
 
 
 @app.command("/smart-match")
