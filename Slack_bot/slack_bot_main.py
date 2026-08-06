@@ -42,14 +42,15 @@ import threading
 
 import db
 import uvicorn
-from app.services.topics import generate_conversation_topics
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-# Add project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from app.services.topics import generate_conversation_topics
+
+# Now import modules from app
 
 # Imports from app must come after sys.path update
 load_dotenv()
