@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS matches (
   user2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'created',
   matched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  conversation_topics JSONB NOT NULL DEFAULT '[]',
 
   CONSTRAINT chk_different_users CHECK (user1_id <> user2_id)
 );
