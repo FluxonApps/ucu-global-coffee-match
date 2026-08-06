@@ -1,11 +1,13 @@
+import logging
 import os
 import traceback
 from typing import Literal
 
 import psycopg
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 from app.api.availability import get_recommended_time_between_users
 from app.auth import CurrentUser
@@ -14,10 +16,15 @@ from app.matching.history import get_past_matches, save_match
 from app.matching.similarity import score
 from app.services.topics import generate_conversation_topics
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/matches", tags=["matches"])
 
+# Base URL used to resolve absolute image links for Slack Block Kit
+BASE_URL = os.environ.get("APP_BASE_URL", "https://coffee-match.pp.ua").rstrip("/")
+
 # Slack Client
-slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN")) if os.environ.get("SLACK_BOT_TOKEN") else None
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
+slack_client = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BOT_TOKEN else None
 
 
 class MatchCreateRequest(BaseModel):
@@ -30,58 +37,78 @@ def send_slack_match_notification(
   topics: list[str],
   is_group: bool = False,
 ):
-  """Надсилає детальне сповіщення про match у Slack бота."""
+  """Sends detailed match notification to a user via Slack bot."""
   if not slack_client or not recipient_slack_id:
+    logger.warning("Slack client is not configured or recipient_slack_id is missing.")
     return
 
-  header_text = "🎉 *Знайдено груповий Coffee Match!*" if is_group else "🎉 *Знайдено новий 1-on-1 Coffee Match!*"
+  header_text = "🎉 *Group Coffee Match Found!*" if is_group else "🎉 *New 1-on-1 Coffee Match Found!*"
 
   blocks = [
     {"type": "section", "text": {"type": "mrkdwn", "text": header_text}},
     {"type": "divider"},
   ]
 
+  partner_names = []
+
   for partner in partners_info:
-    name = f"{partner.get('first_name', '')} {partner.get('last_name', '')}".strip()
-    role = partner.get("role_title") or "Не вказано"
-    dept = partner.get("department") or "Не вказано"
-    bio = partner.get("bio") or "Не вказано"
+    name = f"{partner.get('first_name', '')} {partner.get('last_name', '')}".strip() or "Colleague"
+    partner_names.append(name)
+
+    role = partner.get("role_title") or "Not specified"
+    dept = partner.get("department") or "Not specified"
+    bio = partner.get("bio") or "Not specified"
 
     interests = partner.get("personal_interests") or []
-    interests_str = ", ".join(interests) if interests else "Не вказано"
+    interests_str = ", ".join(interests) if interests else "Not specified"
 
     skills = partner.get("skills") or []
-    skills_str = ", ".join(skills) if skills else "Не вказано"
+    skills_str = ", ".join(skills) if skills else "Not specified"
 
     user_text = (
-      f"👤 *Співрозмовник:* <@{partner['slack_user_id']}> ({name})\n"
-      f"💼 *Посада:* {role} | *Відділ:* {dept}\n"
-      f"📝 *Про себе:* {bio}\n"
-      f"🎯 *Інтереси:* {interests_str}\n"
-      f"💡 *Навички:* {skills_str}"
+      f"👤 *Partner:* <@{partner['slack_user_id']}> ({name})\n"
+      f"💼 *Role:* {role} | *Department:* {dept}\n"
+      f"📝 *Bio:* {bio}\n"
+      f"🎯 *Interests:* {interests_str}\n"
+      f"💡 *Skills:* {skills_str}"
     )
 
-    blocks.append(
-      {
-        "type": "section",
-        "text": {"type": "mrkdwn", "text": user_text},
-      }
-    )
+    section_block = {
+      "type": "section",
+      "text": {"type": "mrkdwn", "text": user_text},
+    }
+
+    # Format absolute URL for Slack accessory image
+    avatar_url = partner.get("avatar_url")
+    if avatar_url:
+      if not avatar_url.startswith("http://") and not avatar_url.startswith("https://"):
+        if not avatar_url.startswith("/"):
+          avatar_url = "/" + avatar_url
+        avatar_url = f"{BASE_URL}{avatar_url}"
+
+      if avatar_url.startswith("https://"):
+        section_block["accessory"] = {
+          "type": "image",
+          "image_url": avatar_url,
+          "alt_text": name,
+        }
+
+    blocks.append(section_block)
     blocks.append({"type": "divider"})
 
-  # Рекомендований час
+  # Recommended meeting time
   if recommended_time:
     blocks.append(
       {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": f"⏰ *Рекомендований час для зустрічі:*\n{recommended_time}",
+          "text": f"⏰ *Recommended Meeting Time:*\n{recommended_time}",
         },
       }
     )
 
-  # Теми для розмови / Icebreakers
+  # Conversation starters
   if topics:
     topics_formatted = "\n".join([f"• {t}" for t in topics])
     blocks.append(
@@ -89,15 +116,24 @@ def send_slack_match_notification(
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": f"💬 *Ідеї для початку розмови:*\n{topics_formatted}",
+          "text": f"💬 *Conversation Starters:*\n{topics_formatted}",
         },
       }
     )
 
+  fallback_text = f"New coffee match with {', '.join(partner_names)}! ☕"
+
   try:
-    slack_client.chat_postMessage(channel=recipient_slack_id, blocks=blocks)
+    slack_client.chat_postMessage(
+      channel=recipient_slack_id,
+      text=fallback_text,
+      blocks=blocks,
+    )
+    logger.info(f"Successfully sent Slack notification to {recipient_slack_id}")
+  except SlackApiError as e:
+    logger.error(f"Failed to send Slack message to {recipient_slack_id}: {e.response['error']}")
   except Exception as e:
-    print(f"Error sending Slack notification to {recipient_slack_id}: {e}")
+    logger.error(f"Unexpected error sending Slack notification: {e}")
 
 
 def find_one_to_one_match(conn, user, all_users):
@@ -129,11 +165,9 @@ def find_group_match(conn, user, all_users):
   for candidate in all_users:
     if candidate["id"] == user["id"]:
       continue
-    # Рахуємо бал схожості з ініціатором
     candidate_score = score(user, candidate)
     candidates.append((candidate_score, candidate))
 
-  # Сортуємо кандидатів за найкращим балом
   candidates.sort(key=lambda x: x[0], reverse=True)
 
   MIN_GROUP_SIZE = 3
@@ -154,7 +188,7 @@ def find_group_match(conn, user, all_users):
 
 @router.get("/history")
 def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_db)):
-  """Повертає історію матчів поточного користувача."""
+  """Returns match history for the current authenticated user."""
   rows = conn.execute(
     """
         SELECT
@@ -205,7 +239,7 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
 def create_match(
   user: CurrentUser,
   conn: psycopg.Connection = Depends(get_db),
-  body: MatchCreateRequest = MatchCreateRequest(),
+  body: MatchCreateRequest = Body(default_factory=MatchCreateRequest),
 ):
   try:
     db_user = conn.execute(
@@ -225,13 +259,15 @@ def create_match(
         detail="Link your Slack account before creating a match",
       )
 
-    # Отримуємо всіх доступних користувачів з прив'язаним Slack
-    all_users = conn.execute("""
+    # Retrieve available registered users with connected Slack IDs
+    all_users = conn.execute(
+      """
             SELECT *
             FROM users
             WHERE slack_user_id IS NOT NULL
               AND is_available = true
-        """).fetchall()
+            """
+    ).fetchall()
 
     if body.match_type == "one_to_one":
       matched_user = find_one_to_one_match(
@@ -246,11 +282,11 @@ def create_match(
           detail="No compatible person is available",
         )
 
-      # 1. Розрахунок часу та генерація тем
+      # 1. Compute recommended time and icebreaker topics
       recommended_time = get_recommended_time_between_users(db_user["id"], matched_user["id"], conn)
       conversation_topics = generate_conversation_topics(db_user, matched_user)
 
-      # 2. Збереження матчу в БД
+      # 2. Persist match record
       match_id = save_match(
         conn,
         [db_user["id"], matched_user["id"]],
@@ -258,7 +294,7 @@ def create_match(
         conversation_topics,
       )
 
-      # 3. Відправка повідомлень у Slack обом учасникам
+      # 3. Dispatch Slack notifications to both participants
       send_slack_match_notification(
         db_user["slack_user_id"],
         [matched_user],
@@ -294,6 +330,13 @@ def create_match(
         },
       }
 
+    # Group match logic
+    if body.group_size is None:
+      raise HTTPException(
+        status_code=422,
+        detail="group_size is required for a group match",
+      )
+
     group_members = find_group_match(
         conn,
         db_user,
@@ -309,7 +352,7 @@ def create_match(
     all_participants = [db_user] + group_members
     participant_ids = [m["id"] for m in all_participants]
 
-    # Генерація тем для групи
+    # Generate group conversation topics
     conversation_topics = generate_conversation_topics(db_user, group_members[0])
 
     match_id = save_match(
@@ -319,13 +362,13 @@ def create_match(
       conversation_topics,
     )
 
-    # Розсилання повідомлень кожному учаснику групи
+    # Dispatch notifications to each group member
     for member in all_participants:
       other_partners = [p for p in all_participants if p["id"] != member["id"]]
       send_slack_match_notification(
         member["slack_user_id"],
         other_partners,
-        None,  # Рекомендований час для групи (за потреби)
+        None,
         conversation_topics,
         is_group=True,
       )
@@ -337,6 +380,8 @@ def create_match(
       "conversation_topics": conversation_topics,
     }
 
-  except Exception:
-    traceback.print_exc()
+  except HTTPException:
     raise
+  except Exception as e:
+    traceback.print_exc()
+    raise HTTPException(status_code=500, detail=str(e))

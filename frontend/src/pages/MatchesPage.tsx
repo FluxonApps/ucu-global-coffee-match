@@ -24,7 +24,12 @@ const MatchesPage = () => {
   const [matchError, setMatchError] = useState('');
 
   useEffect(() => {
-    void getMatchHistory().then(setHistory);
+    void getMatchHistory()
+      .then(setHistory)
+      .catch((error) => {
+        setMatchError(error instanceof ApiError ? error.message : 'Could not load match history.');
+        setHistory([]);
+      });
   }, []);
 
   const handleFindMatch = async (matchType: 'individual' | 'group') => {
