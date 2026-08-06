@@ -60,16 +60,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setUser(null);
   };
 
-  type ProfileUpdate = Partial<
-    Pick<User, 'first_name' | 'last_name' | 'timezone'>
-  > & {
-    personal_interests?: string[];
-  };
-
-  const updateProfile = async (fields: ProfileUpdate) => {
-    const updatedUser = await apiFetch<User & {
+  const updateProfile = async (
+    fields: Partial<Pick<User, 'first_name' | 'last_name' | 'timezone'>> & {
       personal_interests?: string[];
-    }>('/users/me', {
+    },
+  ) => {
+    const updatedUser = await apiFetch<User>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(fields),
     });
