@@ -113,24 +113,25 @@ def set_availability(slack_user_id: str, is_available: bool) -> None:
         conn.commit()
 
 
-def get_last_match_partner_id(user_db_id: int) -> int | None:
-    """
-    Повертає ID користувача, з яким user_db_id був заматчений
-    востаннє (щоб можна було уникати повторів двічі поспіль).
-    """
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-                SELECT user1_id, user2_id
-                FROM matches
-                WHERE user1_id = %s OR user2_id = %s
-                ORDER BY matched_at DESC
-                LIMIT 1
-                """,
-            (user_db_id, user_db_id),
-        )
-        row = cur.fetchone()
-        if not row:
+def get_last_match_partner_id(user_db_id: int):
+    """Повертає ID останнього партнера, з яким був зметчений користувач."""
+    with get_connection() as conn:  # або ваш спосіб отримання коннекту/курсора
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT mp_partner.user_id
+                FROM matches m
+                JOIN match_participants mp ON m.id = mp.match_id
+                JOIN match_participants mp_partner
+                    ON m.id = mp_partner.match_id
+                   AND mp_partner.user_id != %s
+                WHERE mp.user_id = %s
+                ORDER BY m.matched_at DESC
+                LIMIT 1;
+            """,
+                (user_db_id, user_db_id),
+            )
+            row = cur.fetchone()
+            if row:
+                return row[0]  # або row["user_id"], залежно від типу курсора
             return None
-        user1_id, user2_id = row
-        return user2_id if user1_id == user_db_id else user1_id
