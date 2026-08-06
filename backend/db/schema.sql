@@ -60,3 +60,31 @@ CREATE TABLE IF NOT EXISTS user_availability (
   available BOOLEAN NOT NULL DEFAULT true,
   PRIMARY KEY (user_id, day_of_week, hour_slot)
 );
+
+CREATE TABLE IF NOT EXISTS google_calendar_tokens (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  access_token_encrypted TEXT NOT NULL,
+  refresh_token_encrypted TEXT,
+  expires_at TIMESTAMPTZ,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS google_oauth_states (
+  state TEXT PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS google_calendar_busy_slots (
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  event_summary TEXT NOT NULL DEFAULT 'Google Calendar busy',
+  PRIMARY KEY (user_id, starts_at),
+  CHECK (ends_at > starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_google_calendar_busy_slots_time
+ON google_calendar_busy_slots (user_id, starts_at, ends_at);

@@ -118,15 +118,30 @@ export const DEPARTMENT_OPTIONS = [
 ];
 
 export const TIMEZONE_OPTIONS = [
+  'SST (UTC-11)',
+  'HST (UTC-10)',
+  'AKST (UTC-9)',
   'PST (UTC-8)',
   'MST (UTC-7)',
   'CST (UTC-6)',
   'EST (UTC-5)',
+  'AST (UTC-4)',
+  'ART (UTC-3)',
+  'FNT (UTC-2)',
+  'AZOT (UTC-1)',
   'GMT (UTC+0)',
   'CET (UTC+1)',
   'EET (UTC+2)',
+  'MSK (UTC+3)',
+  'GST (UTC+4)',
+  'PKT (UTC+5)',
   'IST (UTC+5:30)',
+  'BST (UTC+6)',
+  'ICT (UTC+7)',
+  'CST-China (UTC+8)',
   'JST (UTC+9)',
+  'AEST (UTC+10)',
+  'NZST (UTC+12)',
 ];
 
 export const DAYS = [
@@ -135,9 +150,20 @@ export const DAYS = [
   { key: 'Wed', label: 'Wednesday' },
   { key: 'Thu', label: 'Thursday' },
   { key: 'Fri', label: 'Friday' },
+  { key: 'Sat', label: 'Saturday' },
+  { key: 'Sun', label: 'Sunday' },
 ] as const;
 
 export const HOURS = [
+  { key: '00', label: '12:00', period: 'AM' },
+  { key: '01', label: '1:00', period: 'AM' },
+  { key: '02', label: '2:00', period: 'AM' },
+  { key: '03', label: '3:00', period: 'AM' },
+  { key: '04', label: '4:00', period: 'AM' },
+  { key: '05', label: '5:00', period: 'AM' },
+  { key: '06', label: '6:00', period: 'AM' },
+  { key: '07', label: '7:00', period: 'AM' },
+  { key: '08', label: '8:00', period: 'AM' },
   { key: '09', label: '9:00', period: 'AM' },
   { key: '10', label: '10:00', period: 'AM' },
   { key: '11', label: '11:00', period: 'AM' },
@@ -147,6 +173,12 @@ export const HOURS = [
   { key: '15', label: '3:00', period: 'PM' },
   { key: '16', label: '4:00', period: 'PM' },
   { key: '17', label: '5:00', period: 'PM' },
+  { key: '18', label: '6:00', period: 'PM' },
+  { key: '19', label: '7:00', period: 'PM' },
+  { key: '20', label: '8:00', period: 'PM' },
+  { key: '21', label: '9:00', period: 'PM' },
+  { key: '22', label: '10:00', period: 'PM' },
+  { key: '23', label: '11:00', period: 'PM' },
 ] as const;
 
 export const HOUR_LABELS: Record<string, string> = Object.fromEntries(HOURS.map((h) => [h.key, `${h.label} ${h.period}`]));
