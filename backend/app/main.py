@@ -4,7 +4,7 @@ import psycopg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, availability, google_calendar, matches, users
+from app.api import auth, availability, matches, users
 from app.db import get_connection
 from app.settings import settings
 
