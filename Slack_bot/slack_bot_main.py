@@ -420,25 +420,74 @@ def handle_mention(event, say):
 
 
 @app.event("app_home_opened")
-def handle_first_open(event, client):
-    """Sends a one-time welcome message when user opens App Home or DM."""
+def update_home_tab(client, event, logger):
+    """Оновлює вміст вкладки Home при її відкритті користувачем."""
     user_id = event["user"]
 
-    welcomed_users = load_welcomed_users()
-    if user_id in welcomed_users:
-        return
+    # Отримуємо дані користувача з БД для динамічного відображення (за наявності)
+    user = db.get_user_by_slack_id(user_id)
+
+    if user:
+        status_text = (
+            "🟢 *Ваш статус:* Доступні для матчів"
+            if user.get("is_available")
+            else "🔴 *Ваш статус:* На паузі (Muted)"
+        )
+        account_info = f"👤 *Профіль:* {user.get('first_name')} {user.get('last_name')} ({user.get('email')})"
+    else:
+        status_text = "⚠️ *Акаунт не прив'язано!* Скористайтеся командою `/login CODE`."
+        account_info = (
+            "Прив'яжіть акаунт з веб-сайту, щоб брати участь у кава-зустрічах."
+        )
 
     try:
-        client.chat_postMessage(
-            channel=user_id,
-            text=f"👋 Hello <@{user_id}>! Welcome to Global Coffee Connect.\n\n{HELP_TEXT}",
+        client.views_publish(
+            user_id=user_id,
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "☕ Вітаємо в Global Coffee Connect!",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Тут ви можете керувати своїм профілем та дізнаватися про доступні можливості.",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"{account_info}\n\n{status_text}",
+                        },
+                    },
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                "*📌 Доступні команди:*\n\n"
+                                "• `/login CODE` — Прив'язати акаунт з сайту\n"
+                                "• `/smart-match` — Знайти ідеального партнера для кави\n"
+                                "• `/random_user` — Випадковий вибір колеги\n"
+                                "• `/mute` / `/unmute` — Пауза або відновлення участі\n"
+                                "• `/help` — Довідка"
+                            ),
+                        },
+                    },
+                ],
+            },
         )
     except Exception as e:
-        logging.error(f"Failed to send welcome message to user {user_id}: {e}")
-        return
-
-    welcomed_users.add(user_id)
-    save_welcomed_users(welcomed_users)
+        logger.error(f"Помилка оновлення Home tab: {e}")
 
 
 @app.event("message")
