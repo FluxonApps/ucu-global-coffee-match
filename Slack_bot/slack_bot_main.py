@@ -359,12 +359,11 @@ def handle_first_open(event, client):
     save_welcomed_users(welcomed_users)
 
 
-# Створюємо мінімальний HTTP-сервер для Render Health Check
 web_app = FastAPI()
 
 
-@web_app.get("/")
-@web_app.get("/health")
+@web_app.api_route("/", methods=["GET", "HEAD"])
+@web_app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok"}
 
