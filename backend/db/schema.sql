@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 
   -- Interests & Skills
   personal_interests TEXT[] NOT NULL DEFAULT '{}',
+  conversation_topics TEXT[] NOT NULL DEFAULT '{}',
   skills TEXT[] NOT NULL DEFAULT '{}',
   languages TEXT[] NOT NULL DEFAULT '{}',
 
@@ -33,19 +34,24 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+
 CREATE TABLE IF NOT EXISTS matches (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  user2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  match_type TEXT NOT NULL CHECK (match_type IN ('one_to_one', 'group')),
   status TEXT NOT NULL DEFAULT 'created',
+  conversation_topics TEXT[] NOT NULL DEFAULT '{}',
   matched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  conversation_topics JSONB NOT NULL DEFAULT '[]',
-
-  CONSTRAINT chk_different_users CHECK (user1_id <> user2_id)
+  notified_at TIMESTAMPTZ
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_user_pair
-ON matches (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
+CREATE TABLE IF NOT EXISTS match_participants (
+  match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (match_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_match_participants_user_id
+ON match_participants(user_id);
 
 CREATE TABLE IF NOT EXISTS user_availability (
   user_id INT REFERENCES users(id) ON DELETE CASCADE,
