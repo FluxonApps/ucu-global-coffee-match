@@ -1,5 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const API_BASE_URL = 'https://coffee-match.pp.ua';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 export async function apiFetch<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   // 1. Отримуємо токен, збережений при вході
   const token = localStorage.getItem('session_token');
