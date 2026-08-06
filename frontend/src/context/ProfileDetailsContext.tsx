@@ -1,7 +1,9 @@
-import { createContext, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type { ProfileDetails } from '../types/coffeeMatch.ts';
+import { apiFetch } from '../lib/api.ts';
+import { useAuth } from './AuthContext.tsx';
 
 export interface ProfileDetailsContextValue {
   details: ProfileDetails;
@@ -29,6 +31,54 @@ const DEFAULT_DETAILS: ProfileDetails = {
 
 export const ProfileDetailsProvider = ({ children }: { children: ReactNode }) => {
   const [details, setDetails] = useState<ProfileDetails>(DEFAULT_DETAILS);
+  const { user } = useAuth();
 
-  return <ProfileDetailsContext.Provider value={{ details, setDetails }}>{children}</ProfileDetailsContext.Provider>;
+  useEffect(() => {
+    if (!user) {
+      setDetails(DEFAULT_DETAILS);
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const profile = await apiFetch<{
+          role_title?: string;
+          department?: string;
+          timezone?: string;
+          bio?: string;
+          avatar_url?: string;
+          skills?: string[];
+          personal_interests?: string[];
+          languages?: string[];
+        }>('/users/me');
+
+        setDetails({
+          role: profile.role_title ?? '',
+          department: profile.department ?? '',
+          timezone: profile.timezone ?? '',
+          bio: profile.bio ?? '',
+          photoUrl: profile.avatar_url ?? '',
+          skills: profile.skills ?? [],
+          interests: profile.personal_interests ?? [],
+          languages: profile.languages ?? [],
+          availability: [],
+          format: [],
+          duration: '',
+          frequency: '',
+          slackConnected: false,
+          slackHandle: '',
+        });
+      } catch (error) {
+        console.error('Failed to load profile details:', error);
+      }
+    };
+
+    loadProfile();
+  }, [user?.id]);
+
+  return (
+    <ProfileDetailsContext.Provider value={{ details, setDetails }}>
+      {children}
+    </ProfileDetailsContext.Provider>
+  );
 };

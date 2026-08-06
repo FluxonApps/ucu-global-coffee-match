@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD-4z2hEzpkH0WfpLPlog6NBqSuAu_ePwA",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "ucu-global-coffee-match.firebaseapp.com",
   projectId: "ucu-global-coffee-match",
   storageBucket: "ucu-global-coffee-match.firebasestorage.app",

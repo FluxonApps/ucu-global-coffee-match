@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext.tsx';
 import { ProfileDetailsProvider } from './context/ProfileDetailsContext.tsx';
 
 import './index.css';
+import AllColleaguesPage from './pages/AllColleaguesPage.tsx';
 import FeedbackPage from './pages/FeedbackPage.tsx';
 import LandingPage from './pages/LandingPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
@@ -29,6 +30,14 @@ createRoot(document.getElementById('root')!).render(
               element={
                 <RequireAuth>
                   <MatchesPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/colleagues"
+              element={
+                <RequireAuth>
+                  <AllColleaguesPage />
                 </RequireAuth>
               }
             />

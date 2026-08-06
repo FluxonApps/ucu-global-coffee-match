@@ -16,6 +16,9 @@ class Settings(BaseSettings):
   ]
   database_url: str = "postgresql://postgres:postgres@localhost:5432/coffee_match"
   cookie_secure: bool = False
+  gemini_project_id: str = ""
+  gemini_location: str = "us-central1"
+  google_application_credentials: str = ""
 
   @field_validator("cors_origins", mode="before")
   @classmethod

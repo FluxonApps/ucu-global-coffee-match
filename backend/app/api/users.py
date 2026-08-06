@@ -43,8 +43,23 @@ PROFILE_COLUMNS = """
 
 
 @router.get("/me")
-def get_profile(user: CurrentUser):
-    return user
+def get_profile(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    row = conn.execute(
+        f"""
+        SELECT {PROFILE_COLUMNS}
+        FROM users
+        WHERE id = %s
+        """,
+        (user["id"],),
+    ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return row
 
 
 @router.patch("/me")
@@ -101,16 +116,36 @@ def set_availability(
     user: CurrentUser,
     conn: psycopg.Connection = Depends(get_db),
 ):
-    conn.execute(
-        "DELETE FROM user_availability WHERE user_id = %s", (user["id"],)
-    )
-    conn.executemany(
-        """INSERT INTO user_availability (user_id, day_of_week, hour_slot, available)
-           VALUES (%s, %s, %s, %s)""",
-        [(user["id"], s.day, s.hour, s.available) for s in slots],
-    )
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM user_availability WHERE user_id = %s", (user["id"],))
+        cur.executemany(
+            """INSERT INTO user_availability (user_id, day_of_week, hour_slot, available)
+               VALUES (%s, %s, %s, %s)""",
+            [(user["id"], slot.day, slot.hour, slot.available) for slot in slots],
+        )
     conn.commit()
     return {"status": "ok"}
+
+
+@router.get("")
+def list_users(
+    user: CurrentUser,
+    conn: psycopg.Connection = Depends(get_db),
+):
+    """List all colleagues (everyone except the current user)."""
+    rows = conn.execute(
+        """
+        SELECT id, first_name, last_name, email, avatar_url,
+               role_title, department, timezone, bio,
+               personal_interests, skills, languages
+        FROM users
+        WHERE id != %s
+        ORDER BY first_name, last_name
+        """,
+        (user["id"],),
+    ).fetchall()
+
+    return rows
 
 
 @router.get("/{user_id}")
