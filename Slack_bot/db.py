@@ -1,30 +1,26 @@
-"""
-Модуль для роботи з PostgreSQL базою даних бота.
-
-Очікує змінну оточення DATABASE_URL у форматі:
-    postgresql://user:password@localhost:5432/slackbot_db
-
-Встановлення залежності:
-    pip install psycopg2-binary
-"""
-
 import logging
 import os
 from contextlib import contextmanager
-from dotenv import load_dotenv
+
 import psycopg2
 import psycopg2.extras
+from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+# Отримуємо URL та автоматично виправляємо префікс для Render
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 
 @contextmanager
 def get_connection():
     """Контекстний менеджер для з'єднання з базою — гарантує закриття."""
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL environment variable is not set")
     conn = psycopg2.connect(DATABASE_URL)
     try:
         yield conn
@@ -122,20 +118,19 @@ def get_last_match_partner_id(user_db_id: int) -> int | None:
     Повертає ID користувача, з яким user_db_id був заматчений
     востаннє (щоб можна було уникати повторів двічі поспіль).
     """
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
                 SELECT user1_id, user2_id
                 FROM matches
                 WHERE user1_id = %s OR user2_id = %s
                 ORDER BY matched_at DESC
                 LIMIT 1
                 """,
-                (user_db_id, user_db_id),
-            )
-            row = cur.fetchone()
-            if not row:
-                return None
-            user1_id, user2_id = row
-            return user2_id if user1_id == user_db_id else user1_id
+            (user_db_id, user_db_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        user1_id, user2_id = row
+        return user2_id if user1_id == user_db_id else user1_id

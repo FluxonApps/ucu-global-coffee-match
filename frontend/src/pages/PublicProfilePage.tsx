@@ -1,9 +1,8 @@
-import { Bookmark, Clock, Globe, Star } from 'lucide-react';
+import { Clock, Globe, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Avatar from '../components/ui/Avatar.tsx';
-import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
 import Tag from '../components/ui/Tag.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
@@ -54,13 +53,8 @@ const PublicProfilePage = () => {
         <Card className="overflow-hidden mb-4">
           <div className="h-24 bg-gradient-to-br from-secondary to-muted" />
           <div className="px-6 pb-6">
-            <div className="-mt-10 flex items-end justify-between mb-4">
+            <div className="-mt-10 flex items-end mb-4">
               <Avatar src={colleague.avatar} name={colleague.name} size={80} />
-              <div className="flex gap-2">
-                <Btn variant="primary" size="sm" onClick={() => {}}>
-                  <Bookmark size={13} /> Save Contact
-                </Btn>
-              </div>
             </div>
             <h1 className="text-xl font-semibold font-display">{colleague.name}</h1>
             <p className="text-muted-foreground text-sm">
@@ -128,12 +122,6 @@ const PublicProfilePage = () => {
               ))}
             </div>
           </Card>
-        </div>
-
-        <div className="flex flex-wrap gap-3 mt-6">
-          <Btn variant="primary" size="lg" onClick={() => {}}>
-            <Bookmark size={16} /> Save Contact
-          </Btn>
         </div>
       </div>
     </div>

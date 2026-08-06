@@ -13,7 +13,6 @@
 import { apiFetch, ApiError } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
 
-
 export type MatchHistoryEntry = {
   id: number;
   matched_at: string;

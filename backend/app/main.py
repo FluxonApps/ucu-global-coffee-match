@@ -24,18 +24,30 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Global Coffee Match API", lifespan=lifespan)
 
+# Переконуємося, що cors_origins є списком (якщо зі змінних оточення передається рядок)
+if isinstance(settings.cors_origins, str):
+  cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+else:
+  cors_origins = settings.cors_origins
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=cors_origins,
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
 )
 
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(matches.router)
 app.include_router(availability.router)
+
+
+# Обробник для кореневого шляху (приймає і GET, і HEAD)
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root():
+  return {"status": "ok", "message": "Global Coffee Match API"}
 
 
 @app.get("/health")
