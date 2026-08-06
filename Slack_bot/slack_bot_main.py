@@ -422,23 +422,23 @@ def handle_mention(event, say):
 
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
-    """Оновлює вміст вкладки Home при її відкритті користувачем."""
+    """Updates the Home tab content when opened by a user."""
     user_id = event["user"]
 
-    # Отримуємо дані користувача з БД для динамічного відображення (за наявності)
+    # Fetch user data from DB for dynamic rendering (if exists)
     user = db.get_user_by_slack_id(user_id)
 
     if user:
         status_text = (
-            "🟢 *Ваш статус:* Доступні для матчів"
+            "🟢 *Your status:* Available for matching"
             if user.get("is_available")
-            else "🔴 *Ваш статус:* На паузі (Muted)"
+            else "🔴 *Your status:* Paused (Muted)"
         )
-        account_info = f"👤 *Профіль:* {user.get('first_name')} {user.get('last_name')} ({user.get('email')})"
+        account_info = f"👤 *Profile:* {user.get('first_name')} {user.get('last_name')} ({user.get('email')})"
     else:
-        status_text = "⚠️ *Акаунт не прив'язано!* Скористайтеся командою `/login CODE`."
+        status_text = "⚠️ *Account not linked!* Use the `/login CODE` command."
         account_info = (
-            "Прив'яжіть акаунт з веб-сайту, щоб брати участь у кава-зустрічах."
+            "Link your account from the website to participate in coffee meetups."
         )
 
     try:
@@ -451,14 +451,14 @@ def update_home_tab(client, event, logger):
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": "☕ Вітаємо в Global Coffee Connect!",
+                            "text": "☕ Welcome to Global Coffee Connect!",
                         },
                     },
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": "Тут ви можете керувати своїм профілем та дізнаватися про доступні можливості.",
+                            "text": "Here you can manage your profile and learn about available features.",
                         },
                     },
                     {"type": "divider"},
@@ -475,12 +475,12 @@ def update_home_tab(client, event, logger):
                         "text": {
                             "type": "mrkdwn",
                             "text": (
-                                "*📌 Доступні команди:*\n\n"
-                                "• `/login CODE` — Прив'язати акаунт з сайту\n"
-                                "• `/smart-match` — Знайти ідеального партнера для кави\n"
-                                "• `/random_user` — Випадковий вибір колеги\n"
-                                "• `/mute` / `/unmute` — Пауза або відновлення участі\n"
-                                "• `/help` — Довідка"
+                                "*📌 Available commands:*\n\n"
+                                "• `/login CODE` — Link account from the website\n"
+                                "• `/smart-match` — Find an ideal coffee partner\n"
+                                "• `/random_user` — Random colleague selection\n"
+                                "• `/mute` / `/unmute` — Pause or resume participation\n"
+                                "• `/help` — Help"
                             ),
                         },
                     },
@@ -488,7 +488,7 @@ def update_home_tab(client, event, logger):
             },
         )
     except Exception as e:
-        logger.error(f"Помилка оновлення Home tab: {e}")
+        logger.error(f"Error updating Home tab: {e}")
 
 
 @app.event("message")

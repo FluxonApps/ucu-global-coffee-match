@@ -2,7 +2,7 @@ import secrets
 import string
 
 import psycopg
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
 from app.auth import (
@@ -101,10 +101,15 @@ def login(body: LoginRequest, response: Response, conn: psycopg.Connection = Dep
 def logout(
   response: Response,
   session_token: str | None = Cookie(default=None),
+  authorization: str | None = Header(default=None),
   conn: psycopg.Connection = Depends(get_db),
 ):
-  if session_token:
-    conn.execute("DELETE FROM sessions WHERE token = %s", (session_token,))
+  token = session_token
+  if not token and authorization:
+    token = authorization.removeprefix("Bearer ")
+
+  if token:
+    conn.execute("DELETE FROM sessions WHERE token = %s", (token,))
     conn.commit()
   clear_session_cookie(response)
 

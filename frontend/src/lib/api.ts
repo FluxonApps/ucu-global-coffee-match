@@ -28,7 +28,7 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
       localStorage.removeItem('session_token');
     }
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+    throw new ApiError(response.status, errorData.detail || `Request failed with status ${response.status}`);
   }
 
   // Якщо відповідь 204 No Content

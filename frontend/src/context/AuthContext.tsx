@@ -11,6 +11,11 @@ export type User = {
   timezone: string | null;
 };
 
+type AuthResponse = User & {
+  token: string;
+  verification_code?: string;
+};
+
 export type AuthContextValue = {
   user: User | null;
   loading: boolean;
@@ -45,24 +50,27 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   const register = async (email: string, password: string, firstName: string, lastName: string) => {
-    const newUser = await apiFetch<User & { verification_code: string }>('/auth/register', {
+    const newUser = await apiFetch<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName }),
     });
+    localStorage.setItem('session_token', newUser.token);
     setUser(newUser);
-    return newUser.verification_code;
+    return newUser.verification_code ?? '';
   };
 
   const login = async (email: string, password: string) => {
-    const loggedInUser = await apiFetch<User>('/auth/login', {
+    const loggedInUser = await apiFetch<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    localStorage.setItem('session_token', loggedInUser.token);
     setUser(loggedInUser);
   };
 
   const logout = async () => {
     await apiFetch<void>('/auth/logout', { method: 'POST' });
+    localStorage.removeItem('session_token');
     setUser(null);
   };
 
