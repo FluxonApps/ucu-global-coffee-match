@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, ExternalLink, Users, Coffee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -6,50 +6,91 @@ import Avatar from '../components/ui/Avatar.tsx';
 import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
-import { getMatchHistory } from '../services/matches.ts';
-import type { MatchHistoryEntry } from '../services/matches.ts';
+import { createMatch, createGroupMatch, getMatchHistory } from '../services/matches.ts';
+import type { CreateMatchResponse, MatchHistoryEntry } from '../services/matches.ts';
+import MatchTopicsCard from '../components/MatchTopicsCard.tsx';
 
 import { useAuth } from '../context/useAuth.ts';
-import { ApiError, apiFetch } from '../lib/api.ts';
+import { ApiError } from '../lib/api.ts';
 
 const MatchesPage = () => {
   const { details } = useProfileDetails();
   const isReady = details.interests.length > 0;
 
   const [history, setHistory] = useState<MatchHistoryEntry[] | null>(null);
+  const [latestMatch, setLatestMatch] = useState<CreateMatchResponse | null>(null);
 
   const { user } = useAuth();
   const [isMatching, setIsMatching] = useState(false);
+  const [isGroupMatching, setIsGroupMatching] = useState(false);
   const [matchError, setMatchError] = useState('');
+  const [groupSize, setGroupSize] = useState<number>(3);
 
   useEffect(() => {
     void getMatchHistory().then(setHistory);
   }, []);
 
   const handleFindMatch = async () => {
-  if (!user) return;
+    if (!user) return;
 
-  setIsMatching(true);
-  setMatchError('');
+    setIsMatching(true);
+    setMatchError('');
 
-  try {
-    await apiFetch('/matches/create', {
-      method: 'POST',
-    });
+    try {
+      const result = await createMatch();
+      setLatestMatch(result);
 
-    // Reload the list so the newly created match appears.
-    const updatedHistory = await getMatchHistory();
-    setHistory(updatedHistory);
-  } catch (error) {
-    setMatchError(
-      error instanceof ApiError
-        ? error.message
-        : 'Could not create a match. Please try again.',
-    );
-  } finally {
-    setIsMatching(false);
-  }
-};
+      // Reload the list so the newly created match appears.
+      const updatedHistory = await getMatchHistory();
+      setHistory(updatedHistory);
+    } catch (error) {
+      setMatchError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create a match. Please try again.',
+      );
+    } finally {
+      setIsMatching(false);
+    }
+  };
+
+  const handleFindGroupMatch = async () => {
+    if (!user) return;
+
+    setIsGroupMatching(true);
+    setMatchError('');
+
+    try {
+      const result = await createGroupMatch(groupSize);
+      // Backend for group may not return `match` the same way as one-to-one.
+      // Reuse MatchTopicsCard to display topics: construct a lightweight CreateMatchResponse-like object.
+      const pseudo: CreateMatchResponse = {
+        match: result.match ?? {
+          id: -1,
+          first_name: `Group (${groupSize})`,
+          last_name: '',
+          email: '',
+          timezone: null,
+          avatar_url: '',
+        },
+        match_record: result.match_record ?? { user1_id: -1, user2_id: -1 },
+        recommended_time: (result as any).recommended_time ?? null,
+        conversation_topics: (result as any).conversation_topics ?? [],
+      };
+
+      setLatestMatch(pseudo);
+      const updatedHistory = await getMatchHistory();
+      setHistory(updatedHistory);
+    } catch (error) {
+      setMatchError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create a group match. Please try again.',
+      );
+    } finally {
+      setIsGroupMatching(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pt-14">
@@ -57,20 +98,49 @@ const MatchesPage = () => {
         <div className="flex items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-medium font-display">Matches</h1>
 
-          {isReady && (
-            <Btn
-              variant="primary"
-              size="md"
-              onClick={handleFindMatch}
-              disabled={isMatching}
-            >
-              <Coffee size={14} />
-              {isMatching ? 'Finding match...' : 'Find a coffee match'}
-            </Btn>
-          )}
+          <div className="flex gap-2">
+            {isReady && (
+              <Btn
+                variant="primary"
+                size="md"
+                onClick={handleFindMatch}
+                disabled={isMatching}
+              >
+                <Coffee size={14} />
+                {isMatching ? 'Finding match...' : 'Find a coffee match'}
+              </Btn>
+            )}
+
+            {isReady && (
+              <Btn variant="secondary" size="md" onClick={handleFindGroupMatch} disabled={isGroupMatching}>
+                <Users size={14} />
+                {isGroupMatching ? 'Finding group...' : `Find group (${groupSize})`}
+              </Btn>
+            )}
+          </div>
         </div>
 
         {matchError && <p className="mb-4 text-sm text-destructive">{matchError}</p>}
+
+        {latestMatch && (
+          <MatchTopicsCard
+            colleague={latestMatch.match}
+            topics={latestMatch.conversation_topics}
+            onDismiss={() => setLatestMatch(null)}
+          />
+        )}
+
+        {/* Group size control */}
+        <div className="mb-4">
+          <label className="text-sm mr-2">Group size</label>
+          <select value={groupSize} onChange={(e) => setGroupSize(Number(e.target.value))} className="border rounded px-2 py-1">
+            {[3, 4, 5, 6].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {!isReady && (
           <div className="max-w-md mb-8">
@@ -114,8 +184,8 @@ const MatchesPage = () => {
                   const fullName = `${match.colleague.first_name} ${match.colleague.last_name}`;
 
                   return (
-                    <li key={match.id} className="flex items-center gap-3 px-5 py-4">
-                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0">
+                    <li key={match.id} className="flex items-start gap-3 px-5 py-4">
+                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0 pt-1">
                         <Avatar src={match.colleague.avatar_url} name={fullName} size={44} />
                       </Link>
 
@@ -126,13 +196,44 @@ const MatchesPage = () => {
                         >
                           {fullName}
                         </Link>
-                        <p className="truncate text-sm text-muted-foreground">{match.colleague.email}</p>
+                        <p className="truncate text-sm text-muted-foreground mb-2">{match.colleague.email}</p>
+
+                        {match.conversation_topics && match.conversation_topics.length > 0 && (
+                          <div className="mt-1">
+                            <p className="text-xs font-semibold text-foreground mb-1">
+                              Conversation topic suggestions
+                            </p>
+                            <ul className="space-y-1">
+                              {match.conversation_topics.map((topic, index) => (
+                                <li
+                                  key={index}
+                                  className="text-xs text-muted-foreground leading-relaxed"
+                                >
+                                  • {topic}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
                           <Clock size={11} /> {matchedAt}
                         </span>
+                        {match.recommended_time ? (
+                          <div className="flex max-w-56 items-start gap-1 text-right text-xs text-muted-foreground">
+                            <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
+                            <span>
+                              <span className="block">Your time: {match.recommended_time.user_local.display}</span>
+                              <span className="block">
+                                Their time: {match.recommended_time.match_local.display}
+                              </span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No common available hour</span>
+                        )}
                         <Link to={`/profile/${match.colleague.id}`}>
                           <Btn variant="outline" size="sm">
                             <ExternalLink size={12} /> View Profile
