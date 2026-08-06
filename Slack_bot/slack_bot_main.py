@@ -117,35 +117,55 @@ def resolve_avatar_url(client, db_user: dict) -> str:
     return avatar_url
 
 
-def build_user_card_blocks(client, db_user: dict) -> list[dict]:
-    """Generates Block Kit payload with profile picture and database user info."""
+def build_user_card_blocks(client, db_user: dict, topics: list[str] | None = None) -> list[dict]:
+    """Generates Block Kit payload with profile picture, interests and conversation topics."""
     full_name = f"{db_user['first_name']} {db_user['last_name']}".strip()
     slack_id = db_user["slack_user_id"]
 
-    details = []
-    if db_user.get("role_title"):
-        details.append(db_user["role_title"])
-    if db_user.get("department"):
-        details.append(db_user["department"])
-    details_line = " · ".join(details)
-
-    text = f"🎲 *Random User:* <@{slack_id}> ({full_name})"
-    if details_line:
-        text += f"\n_{details_line}_"
+    role = db_user.get("role_title") or "Not specified"
+    dept = db_user.get("department") or "Not specified"
+    bio = db_user.get("bio") or "Not specified"
+    interests = db_user.get("personal_interests") or []
+    interests_str = ", ".join(interests) if interests else "Not specified"
+    skills = db_user.get("skills") or []
+    skills_str = ", ".join(skills) if skills else "Not specified"
 
     avatar_url = resolve_avatar_url(client, db_user)
 
-    return [
+    blocks = [
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": text},
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"🎲 *Random User:* <@{slack_id}> ({full_name})\n"
+                    f"💼 *Role:* {role} | *Department:* {dept}\n"
+                    f"📝 *Bio:* {bio}\n"
+                    f"🎯 *Interests:* {interests_str}\n"
+                    f"💡 *Skills:* {skills_str}"
+                ),
+            },
             "accessory": {
                 "type": "image",
                 "image_url": avatar_url,
                 "alt_text": full_name,
             },
-        }
+        },
     ]
+
+    if topics:
+        topics_formatted = "\n".join([f"• {t}" for t in topics])
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"💬 *Conversation Starters:*\n{topics_formatted}",
+                },
+            }
+        )
+
+    return blocks
 
 
 @app.command("/random_user")
@@ -179,7 +199,15 @@ def pick_random_user(ack, respond, command, client):
 
     chosen_user = random.choice(candidates)
 
-    blocks = build_user_card_blocks(client, chosen_user)
+    # Generate conversation topics based on both users' interests
+    topics = []
+    if requester:
+        try:
+            topics = generate_conversation_topics(requester, chosen_user)
+        except Exception as e:
+            logging.warning(f"Failed to generate conversation topics: {e}")
+
+    blocks = build_user_card_blocks(client, chosen_user, topics)
     respond(
         blocks=blocks,
         text=f"Random User: {chosen_user['first_name']} {chosen_user['last_name']}",
@@ -187,7 +215,7 @@ def pick_random_user(ack, respond, command, client):
 
     if requester:
         try:
-            db.record_match(requester["id"], chosen_user["id"])
+            db.record_match(requester["id"], chosen_user["id"], topics)
         except Exception as e:
             logging.warning(f"Failed to record match in database: {e}")
 

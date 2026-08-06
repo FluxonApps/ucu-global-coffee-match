@@ -36,7 +36,8 @@ def get_registered_users(exclude_slack_id: str | None = None) -> list[dict]:
     """
     query = """
         SELECT id, first_name, last_name, email, avatar_url,
-               role_title, department, slack_user_id
+               role_title, department, slack_user_id,
+               personal_interests, bio, skills, languages
         FROM users
         WHERE slack_user_id IS NOT NULL
           AND is_available = true
@@ -64,16 +65,17 @@ def get_user_by_slack_id(slack_user_id: str) -> dict | None:
             return cur.fetchone()
 
 
-def record_match(user1_db_id: int, user2_db_id: int) -> int:
+def record_match(user1_db_id: int, user2_db_id: int, conversation_topics: list[str] | None = None) -> int:
     """Records a new match in the matches table and adds participants to match_participants."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO matches (match_type, status, matched_at)
-                VALUES ('one_to_one', 'created', NOW())
+                INSERT INTO matches (match_type, status, conversation_topics, matched_at)
+                VALUES ('one_to_one', 'created', %s, NOW())
                 RETURNING id;
-                """
+                """,
+                (conversation_topics or [],),
             )
             match_id = cur.fetchone()[0]
 
