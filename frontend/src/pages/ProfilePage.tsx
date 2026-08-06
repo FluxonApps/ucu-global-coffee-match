@@ -26,7 +26,7 @@ type MultiField =
   | 'languages'
   | 'format';
 
-const DAY_INDEX: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4 };
+const DAY_INDEX: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 type CalendarStatus = { connected: boolean; last_synced_at: string | null; busy_slots: number };
 

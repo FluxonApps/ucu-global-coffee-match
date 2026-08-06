@@ -33,12 +33,12 @@ const AvailabilityCalendar = ({ selected, onToggle }: AvailabilityCalendarProps)
   return (
     <div className="select-none">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse" style={{ minWidth: 480 }}>
+        <table className="w-full border-collapse" style={{ minWidth: 20 + HOURS.length * 44 }}>
           <thead>
             <tr>
-              <th className="pb-3 w-20" aria-hidden="true" />
+              <th className="pb-3 w-20 sticky left-0 bg-card" aria-hidden="true" />
               {HOURS.map((h) => (
-                <th key={h.key} className="pb-3 text-center" style={{ minWidth: 52 }} scope="col">
+                <th key={h.key} className="pb-3 text-center" style={{ minWidth: 44 }} scope="col">
                   <div className="flex flex-col items-center leading-none">
                     <span className="text-xs font-semibold text-foreground font-mono">{h.label}</span>
                     <span className="text-[10px] text-muted-foreground font-mono">{h.period}</span>
@@ -50,7 +50,7 @@ const AvailabilityCalendar = ({ selected, onToggle }: AvailabilityCalendarProps)
           <tbody>
             {DAYS.map((d) => (
               <tr key={d.key}>
-                <td className="pr-3 py-1 text-right">
+                <td className="pr-3 py-1 text-right sticky left-0 bg-card">
                   <span className="text-xs font-medium text-foreground font-mono">{d.key}</span>
                 </td>
                 {HOURS.map((h) => {

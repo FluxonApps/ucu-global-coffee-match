@@ -4,3 +4,5 @@ python-dotenv
 psycopg2-binary
 fastapi
 uvicorn
+google-genai
+pydantic-settings

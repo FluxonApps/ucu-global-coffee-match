@@ -12,15 +12,30 @@ router = APIRouter(prefix="/availability", tags=["availability"])
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 MIN_OVERLAP = timedelta(minutes=30)
 LEGACY_TIMEZONES = {
+  "SST (UTC-11)": "Pacific/Pago_Pago",
+  "HST (UTC-10)": "Pacific/Honolulu",
+  "AKST (UTC-9)": "America/Anchorage",
   "PST (UTC-8)": "America/Los_Angeles",
   "MST (UTC-7)": "America/Denver",
   "CST (UTC-6)": "America/Chicago",
   "EST (UTC-5)": "America/New_York",
+  "AST (UTC-4)": "America/Halifax",
+  "ART (UTC-3)": "America/Argentina/Buenos_Aires",
+  "FNT (UTC-2)": "America/Noronha",
+  "AZOT (UTC-1)": "Atlantic/Azores",
   "GMT (UTC+0)": "Etc/GMT",
   "CET (UTC+1)": "Europe/Paris",
   "EET (UTC+2)": "Europe/Helsinki",
+  "MSK (UTC+3)": "Europe/Moscow",
+  "GST (UTC+4)": "Asia/Dubai",
+  "PKT (UTC+5)": "Asia/Karachi",
   "IST (UTC+5:30)": "Asia/Kolkata",
+  "BST (UTC+6)": "Asia/Dhaka",
+  "ICT (UTC+7)": "Asia/Bangkok",
+  "CST-China (UTC+8)": "Asia/Shanghai",
   "JST (UTC+9)": "Asia/Tokyo",
+  "AEST (UTC+10)": "Australia/Sydney",
+  "NZST (UTC+12)": "Pacific/Auckland",
 }
 
 
