@@ -24,6 +24,9 @@ export type AuthContextValue = {
       skills?: string[];
       languages?: string[];
       avatar_url?: string;
+      role_title?: string;
+      department?: string;
+      bio?: string;
     },
   ) => Promise<User & { personal_interests?: string[]; skills?: string[]; languages?: string[]; avatar_url?: string }>;
 };
@@ -69,6 +72,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       skills?: string[];
       languages?: string[];
       avatar_url?: string;
+      role_title?: string;
+      department?: string;
+      bio?: string;
     },
   ) => {
     const updatedUser = await apiFetch<User>('/users/me', {
