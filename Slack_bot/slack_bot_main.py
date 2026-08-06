@@ -33,15 +33,20 @@ Configuration Steps in Slack App Console:
     12. Reinstall app to workspace after scope/event updates
 """
 
+import os
+import sys
+from pathlib import Path
+
+# Встановлюємо шлях до кореня проєкту в першу чергу
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+# Тільки після цього робимо всі інші імпорти
 import json
 import logging
-import os
 import random
-import sys
 import threading
-
-# Add parent directory to sys.path to enable imports from 'app'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import db
 import uvicorn
