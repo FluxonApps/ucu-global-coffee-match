@@ -6,10 +6,11 @@ from app.auth import CurrentUser
 from app.db import get_db
 from app.matching.history import get_past_matches, save_matches
 from app.matching.similarity import score
+from app.services.topics import generate_conversation_topics
+from psycopg.types.json import Jsonb
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
-# backend/app/api/matches.py
 
 def find_match(conn, user, all_users):
     past_pairs = get_past_matches(conn)
@@ -38,6 +39,7 @@ def find_match(conn, user, all_users):
 
     return best_user
 
+
 def store_match(user, best_user, conn):
     """Saves new pair in DB through history.save_matches."""
     save_matches(conn, [(user["id"], best_user["id"])])
@@ -56,6 +58,7 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
         SELECT
           matches.id,
           matches.matched_at,
+          matches.conversation_topics,
           colleague.id AS colleague_id,
           colleague.email AS colleague_email,
           colleague.first_name AS colleague_first_name,
@@ -78,6 +81,7 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
             "id": row["id"],
             "matched_at": row["matched_at"],
             "recommended_time": get_recommended_time_between_users(user["id"], row["colleague_id"], conn),
+            "conversation_topics": row["conversation_topics"] or [],
             "colleague": {
                 "id": row["colleague_id"],
                 "email": row["colleague_email"],
@@ -88,6 +92,7 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
         }
         for row in rows
     ]
+
 
 @router.post("/create")
 def create_match(
@@ -104,8 +109,6 @@ def create_match(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # IMPORTANT:
-    # Keep the existing matching algorithm unchanged.
     best_user = find_match(conn, db_user, all_users)
 
     if best_user is None:
@@ -116,19 +119,27 @@ def create_match(
 
     recommended_time = get_recommended_time_between_users(db_user["id"], best_user["id"], conn)
 
-    # ---------------------------------------------------------
-    # Save the match exactly as before
-    # ---------------------------------------------------------
-
     stored_match = store_match(
         db_user,
         best_user,
         conn,
     )
 
-    # ---------------------------------------------------------
-    # Return match + recommended time to frontend
-    # ---------------------------------------------------------
+    conversation_topics = generate_conversation_topics(db_user, best_user)
+
+    conn.execute(
+        """
+        UPDATE matches
+        SET conversation_topics = %s
+        WHERE (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s)
+        """,
+        (
+            Jsonb(conversation_topics),
+            db_user["id"], best_user["id"],
+            best_user["id"], db_user["id"],
+        ),
+    )
+    conn.commit()
 
     return {
         "match": {
@@ -137,7 +148,9 @@ def create_match(
             "last_name": best_user["last_name"],
             "email": best_user["email"],
             "timezone": best_user["timezone"],
+            "avatar_url": best_user.get("avatar_url"),
         },
         "match_record": stored_match,
         "recommended_time": recommended_time,
+        "conversation_topics": conversation_topics,
     }
