@@ -1,5 +1,5 @@
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { CalendarCheck, CalendarSync, Camera, Check, Link2Off, LogOut, User } from 'lucide-react';
+import { Camera, Check, LogOut, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -27,8 +27,6 @@ type MultiField =
   | 'format';
 
 const DAY_INDEX: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-type CalendarStatus = { connected: boolean; last_synced_at: string | null; busy_slots: number };
 
 const ProfilePage = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -50,8 +48,6 @@ const ProfilePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
-  const [calendarStatus, setCalendarStatus] = useState<CalendarStatus | null>(null);
-  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
 
   useEffect(() => {
     setFirstName(user?.first_name ?? '');
@@ -63,13 +59,6 @@ const ProfilePage = () => {
     setLocal(details);
     setPhotoPreview(details.photoUrl);
   }, [details]);
-
-  useEffect(() => {
-    if (!user) return;
-    void apiFetch<CalendarStatus>('/users/me/calendar/status')
-      .then(setCalendarStatus)
-      .catch(() => setCalendarStatus(null));
-  }, [user]);
 
   const set =
     (key: keyof ProfileDetails) =>
@@ -218,33 +207,6 @@ const ProfilePage = () => {
       void navigate('/');
     } finally {
       setIsSigningOut(false);
-    }
-  };
-
-  const connectGoogleCalendar = () => {
-    window.location.assign(`${API_BASE}/users/me/calendar/connect`);
-  };
-
-  const syncGoogleCalendar = async () => {
-    setError(null);
-    setIsSyncingCalendar(true);
-    try {
-      const result = await apiFetch<{ busy_slots: number; synced_at: string }>('/users/me/calendar/sync', { method: 'POST' });
-      setCalendarStatus({ connected: true, busy_slots: result.busy_slots, last_synced_at: result.synced_at });
-    } catch (syncError) {
-      setError(syncError instanceof ApiError ? syncError.message : 'Could not sync Google Calendar.');
-    } finally {
-      setIsSyncingCalendar(false);
-    }
-  };
-
-  const disconnectGoogleCalendar = async () => {
-    setError(null);
-    try {
-      await apiFetch('/users/me/calendar', { method: 'DELETE' });
-      setCalendarStatus({ connected: false, last_synced_at: null, busy_slots: 0 });
-    } catch (disconnectError) {
-      setError(disconnectError instanceof ApiError ? disconnectError.message : 'Could not disconnect Google Calendar.');
     }
   };
 
@@ -468,39 +430,6 @@ const ProfilePage = () => {
             selected={local.availability}
             onToggle={toggleSlot}
           />
-        </Card>
-
-        <Card className="p-6 mb-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-semibold font-display">Google Calendar</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {calendarStatus?.connected
-                  ? `${calendarStatus.busy_slots} busy interval(s) are excluded from your manual availability.`
-                  : 'Connect to exclude busy Google Calendar intervals from your manual availability.'}
-              </p>
-              {calendarStatus?.last_synced_at && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Last synced: {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(calendarStatus.last_synced_at))}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              {calendarStatus?.connected && (
-                <>
-                  <Btn variant="outline" size="sm" onClick={() => void syncGoogleCalendar()} disabled={isSyncingCalendar}>
-                    <CalendarSync size={14} /> {isSyncingCalendar ? 'Syncing...' : 'Sync'}
-                  </Btn>
-                  <Btn variant="ghost" size="sm" onClick={() => void disconnectGoogleCalendar()}>
-                    <Link2Off size={14} /> Disconnect
-                  </Btn>
-                </>
-              )}
-              <Btn variant={calendarStatus?.connected ? 'outline' : 'primary'} size="sm" onClick={connectGoogleCalendar}>
-                <CalendarCheck size={14} /> {calendarStatus?.connected ? 'Reconnect' : 'Connect'}
-              </Btn>
-            </div>
-          </div>
         </Card>
 
         <div className="flex justify-between items-center pb-8">

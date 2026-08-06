@@ -74,12 +74,8 @@ def format_local_range(utc_start: datetime, utc_end: datetime, timezone_name: st
   return f"{DAY_NAMES[local_start.weekday()]} {local_start:%H:%M}-{DAY_NAMES[local_end.weekday()]} {local_end:%H:%M}"
 
 
-def overlaps_busy_interval(start: datetime, end: datetime, busy_intervals: list[tuple[datetime, datetime]]) -> bool:
-  return any(max(start, busy_start) < min(end, busy_end) for busy_start, busy_end in busy_intervals)
-
-
 def get_common_slots_between_users(user_id: int, colleague_id: int, conn: psycopg.Connection) -> list[dict]:
-  """Find manual overlaps, excluding concrete Google Calendar busy intervals."""
+  """Find overlaps between two users' manually declared availability."""
   rows = conn.execute("SELECT id, timezone FROM users WHERE id IN (%s, %s)", (user_id, colleague_id)).fetchall()
   timezones = {row["id"]: row["timezone"] for row in rows}
   if user_id not in timezones or colleague_id not in timezones:
@@ -90,20 +86,11 @@ def get_common_slots_between_users(user_id: int, colleague_id: int, conn: psycop
        WHERE user_id IN (%s, %s) AND available = TRUE""",
     (user_id, colleague_id),
   ).fetchall()
-  busy_rows = conn.execute(
-    """SELECT user_id, starts_at, ends_at FROM google_calendar_busy_slots
-       WHERE user_id IN (%s, %s) AND ends_at > now()""",
-    (user_id, colleague_id),
-  ).fetchall()
-  busy: dict[int, list[tuple[datetime, datetime]]] = {user_id: [], colleague_id: []}
-  for row in busy_rows:
-    busy[row["user_id"]].append((row["starts_at"], row["ends_at"]))
 
   intervals: dict[int, list[tuple[datetime, datetime]]] = {user_id: [], colleague_id: []}
   for slot in availability:
     interval = local_slot_to_utc(slot["day_of_week"], slot["hour_slot"], timezones[slot["user_id"]])
-    if not overlaps_busy_interval(*interval, busy[slot["user_id"]]):
-      intervals[slot["user_id"]].append(interval)
+    intervals[slot["user_id"]].append(interval)
 
   common: dict[tuple[datetime, datetime], dict] = {}
   for user_start, user_end in intervals[user_id]:
