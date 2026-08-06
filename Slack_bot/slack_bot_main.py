@@ -323,7 +323,7 @@ def handle_login_submit(ack, body, client, view):
     client.chat_postMessage(channel=slack_user_id, text=message)
 
 
-@app.command("/mute")
+@app.command("/mute-bot")
 def handle_mute_command(ack, respond, command):
     """Pauses user availability for matching."""
     ack()
@@ -345,7 +345,7 @@ def handle_mute_command(ack, respond, command):
         respond(f"Failed to update availability status: {e}")
 
 
-@app.command("/unmute")
+@app.command("/unmute-bot")
 def handle_unmute_command(ack, respond, command):
     """Resumes user availability for matching."""
     ack()
