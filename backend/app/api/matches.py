@@ -5,18 +5,29 @@ from typing import Literal
 
 import psycopg
 from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-from app.api.availability import get_recommended_time_between_users
+from app.api.availability import (
+  get_recommended_time_between_users,
+  get_recommended_time_for_group,
+)
 from app.auth import CurrentUser
 from app.db import get_db
 from app.matching.history import get_past_matches, save_match
 from app.matching.similarity import score
-from app.services.topics import generate_conversation_topics
+from app.services.topics import (
+  generate_conversation_topics,
+  generate_group_conversation_topics,
+)
 
 logger = logging.getLogger(__name__)
+MIN_GROUP_SIZE = 3
+MAX_GROUP_SIZE = 7
+
+# Minimum similarity score required between any two members
+MIN_GROUP_SIMILARITY = 2
 router = APIRouter(prefix="/matches", tags=["matches"])
 
 # Base URL used to resolve absolute image links for Slack Block Kit
@@ -28,7 +39,8 @@ slack_client = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BOT_TOKEN else None
 
 
 class MatchCreateRequest(BaseModel):
-    match_type: Literal["one_to_one", "group"] = "one_to_one"
+  match_type: Literal["one_to_one", "group"] = "one_to_one"
+
 
 def send_slack_match_notification(
   recipient_slack_id: str,
@@ -65,8 +77,10 @@ def send_slack_match_notification(
     skills = partner.get("skills") or []
     skills_str = ", ".join(skills) if skills else "Not specified"
 
+    label = "Partner" if not is_group else "Group member"
+
     user_text = (
-      f"👤 *Partner:* <@{partner['slack_user_id']}> ({name})\n"
+      f"👤 *{label}:* <@{partner['slack_user_id']}> ({name})"
       f"💼 *Role:* {role} | *Department:* {dept}\n"
       f"📝 *Bio:* {bio}\n"
       f"🎯 *Interests:* {interests_str}\n"
@@ -98,12 +112,31 @@ def send_slack_match_notification(
 
   # Recommended meeting time
   if recommended_time:
+    if isinstance(recommended_time, dict):
+      lines = [f"*UTC:* {recommended_time['utc']}"]
+
+      if "user_local" in recommended_time:
+        lines.append(f"*Your time:* {recommended_time['user_local']['display']}")
+        lines.append(f"*Partner's time:* {recommended_time['match_local']['display']}")
+
+      elif "participants" in recommended_time:
+        lines.append("")
+        lines.append("*Local times:*")
+
+        for participant in recommended_time["participants"]:
+          lines.append(f"• {participant['display']} ({participant['timezone']})")
+
+      recommended_time_text = "\n".join(lines)
+
+    else:
+      recommended_time_text = str(recommended_time)
+
     blocks.append(
       {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": f"⏰ *Recommended Meeting Time:*\n{recommended_time}",
+          "text": f"⏰ *Recommended Meeting Time:*\n{recommended_time_text}",
         },
       }
     )
@@ -121,7 +154,11 @@ def send_slack_match_notification(
       }
     )
 
-  fallback_text = f"New coffee match with {', '.join(partner_names)}! ☕"
+  fallback_text = (
+    f"New group coffee match with {', '.join(partner_names)}! ☕"
+    if is_group
+    else f"New coffee match with {partner_names[0]}! ☕"
+  )
 
   try:
     slack_client.chat_postMessage(
@@ -160,30 +197,54 @@ def find_one_to_one_match(conn, user, all_users):
 
 def find_group_match(conn, user, all_users):
   past_pairs = get_past_matches(conn)
+
+  # Build a list of candidates sorted by similarity to the initiator
   candidates = []
 
   for candidate in all_users:
     if candidate["id"] == user["id"]:
       continue
-    candidate_score = score(user, candidate)
-    candidates.append((candidate_score, candidate))
 
-  candidates.sort(key=lambda x: x[0], reverse=True)
+    if (user["id"], candidate["id"]) in past_pairs:
+      continue
 
-  MIN_GROUP_SIZE = 3
-  MAX_GROUP_SIZE = 7
+    candidates.append(
+      (
+        score(user, candidate),
+        candidate,
+      )
+    )
 
-  selected_group = []
+  candidates.sort(reverse=True, key=lambda x: x[0])
+
+  group = [user]
 
   for _, candidate in candidates:
-      if len(selected_group) >= MAX_GROUP_SIZE - 1:
-          break
+    if len(group) >= MAX_GROUP_SIZE:
+      break
 
-      selected_group.append(candidate)
+    compatible = True
 
-  if len(selected_group) < MIN_GROUP_SIZE - 1:
-      return None
-  return selected_group
+    # Candidate must be similar to EVERY existing member
+    for member in group:
+      if member["id"] == candidate["id"]:
+        continue
+
+      if (member["id"], candidate["id"]) in past_pairs or (candidate["id"], member["id"]) in past_pairs:
+        compatible = False
+        break
+
+      if score(member, candidate) < MIN_GROUP_SIMILARITY:
+        compatible = False
+        break
+
+    if compatible:
+      group.append(candidate)
+
+  if len(group) < MIN_GROUP_SIZE:
+    return None
+
+  return group[1:]
 
 
 @router.get("/history")
@@ -191,48 +252,72 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
   """Returns match history for the current authenticated user."""
   rows = conn.execute(
     """
-        SELECT
-          m.id,
+      SELECT
+          m.id AS match_id,
           m.match_type,
           m.matched_at,
           m.conversation_topics,
-          colleague.id AS colleague_id,
-          colleague.email AS colleague_email,
-          colleague.first_name AS colleague_first_name,
-          colleague.last_name AS colleague_last_name,
-          colleague.avatar_url AS colleague_avatar_url,
-          colleague.role_title AS colleague_role_title,
-          colleague.department AS colleague_department
-        FROM matches m
-        JOIN match_participants mp_me
-          ON mp_me.match_id = m.id AND mp_me.user_id = %s
-        JOIN match_participants mp_other
-          ON mp_other.match_id = m.id AND mp_other.user_id != %s
-        JOIN users colleague ON colleague.id = mp_other.user_id
-        ORDER BY m.matched_at DESC
-        """,
-    (user["id"], user["id"]),
+          u.id AS participant_id,
+          u.email,
+          u.first_name,
+          u.last_name,
+          u.avatar_url,
+          u.role_title,
+          u.department
+      FROM matches m
+      JOIN match_participants mp
+          ON mp.match_id = m.id
+      JOIN users u
+          ON u.id = mp.user_id
+      WHERE m.id IN (
+          SELECT match_id
+          FROM match_participants
+          WHERE user_id = %s
+      )
+      ORDER BY m.matched_at DESC
+      """,
+    (user["id"],),
   ).fetchall()
 
-  return [
-    {
-      "id": row["id"],
-      "match_type": row["match_type"],
-      "matched_at": row["matched_at"],
-      "recommended_time": get_recommended_time_between_users(user["id"], row["colleague_id"], conn),
-      "conversation_topics": row["conversation_topics"] or [],
-      "colleague": {
-        "id": row["colleague_id"],
-        "email": row["colleague_email"],
-        "first_name": row["colleague_first_name"],
-        "last_name": row["colleague_last_name"],
-        "avatar_url": row["colleague_avatar_url"],
-        "role_title": row["colleague_role_title"],
-        "department": row["colleague_department"],
-      },
-    }
-    for row in rows
-  ]
+  matches = {}
+
+  for row in rows:
+    match_id = row["match_id"]
+
+    if match_id not in matches:
+      matches[match_id] = {
+        "id": match_id,
+        "match_type": row["match_type"],
+        "matched_at": row["matched_at"],
+        "conversation_topics": row["conversation_topics"] or [],
+        "participants": [],
+        "participant_ids": [user["id"]],  # include current user
+      }
+
+    if row["participant_id"] != user["id"]:
+      matches[match_id]["participant_ids"].append(row["participant_id"])
+
+      matches[match_id]["participants"].append(
+        {
+          "id": row["participant_id"],
+          "email": row["email"],
+          "first_name": row["first_name"],
+          "last_name": row["last_name"],
+          "avatar_url": row["avatar_url"],
+          "role_title": row["role_title"],
+          "department": row["department"],
+        }
+      )
+
+  for match in matches.values():
+    match["recommended_time"] = get_recommended_time_for_group(
+      match["participant_ids"],
+      conn,
+    )
+
+    del match["participant_ids"]
+
+  return list(matches.values())
 
 
 @router.post("/create")
@@ -242,6 +327,9 @@ def create_match(
   body: MatchCreateRequest = Body(default_factory=MatchCreateRequest),
 ):
   try:
+    # ---------------------------------------------------
+    # Load current user
+    # ---------------------------------------------------
     db_user = conn.execute(
       "SELECT * FROM users WHERE id = %s",
       (user["id"],),
@@ -259,16 +347,21 @@ def create_match(
         detail="Link your Slack account before creating a match",
       )
 
-    # Retrieve available registered users with connected Slack IDs
+    # ---------------------------------------------------
+    # Available users
+    # ---------------------------------------------------
     all_users = conn.execute(
       """
             SELECT *
             FROM users
             WHERE slack_user_id IS NOT NULL
-              AND is_available = true
+              AND is_available = TRUE
             """
     ).fetchall()
 
+    # ===================================================
+    # ONE-TO-ONE MATCH
+    # ===================================================
     if body.match_type == "one_to_one":
       matched_user = find_one_to_one_match(
         conn,
@@ -282,19 +375,29 @@ def create_match(
           detail="No compatible person is available",
         )
 
-      # 1. Compute recommended time and icebreaker topics
-      recommended_time = get_recommended_time_between_users(db_user["id"], matched_user["id"], conn)
-      conversation_topics = generate_conversation_topics(db_user, matched_user)
+      participant_ids = [
+        db_user["id"],
+        matched_user["id"],
+      ]
 
-      # 2. Persist match record
+      recommended_time = get_recommended_time_between_users(
+        db_user["id"],
+        matched_user["id"],
+        conn,
+      )
+
+      conversation_topics = generate_conversation_topics(
+        db_user,
+        matched_user,
+      )
+
       match_id = save_match(
         conn,
-        [db_user["id"], matched_user["id"]],
+        participant_ids,
         "one_to_one",
         conversation_topics,
       )
 
-      # 3. Dispatch Slack notifications to both participants
       send_slack_match_notification(
         db_user["slack_user_id"],
         [matched_user],
@@ -302,6 +405,7 @@ def create_match(
         conversation_topics,
         is_group=False,
       )
+
       send_slack_match_notification(
         matched_user["slack_user_id"],
         [db_user],
@@ -313,34 +417,29 @@ def create_match(
       return {
         "id": match_id,
         "match_type": "one_to_one",
-        "participant_ids": [db_user["id"], matched_user["id"]],
+        "participant_ids": participant_ids,
         "recommended_time": recommended_time,
         "conversation_topics": conversation_topics,
-        "match": {
-          "id": matched_user["id"],
-          "first_name": matched_user["first_name"],
-          "last_name": matched_user["last_name"],
-          "email": matched_user["email"],
-          "timezone": matched_user["timezone"],
-          "avatar_url": matched_user.get("avatar_url"),
-        },
-        "match_record": {
-          "user1_id": db_user["id"],
-          "user2_id": matched_user["id"],
-        },
+        "participants": [
+          {
+            "id": matched_user["id"],
+            "first_name": matched_user["first_name"],
+            "last_name": matched_user["last_name"],
+            "email": matched_user["email"],
+            "avatar_url": matched_user["avatar_url"],
+            "role_title": matched_user["role_title"],
+            "department": matched_user["department"],
+          }
+        ],
       }
 
-    # Group match logic
-    if body.group_size is None:
-      raise HTTPException(
-        status_code=422,
-        detail="group_size is required for a group match",
-      )
-
+    # ===================================================
+    # GROUP MATCH
+    # ===================================================
     group_members = find_group_match(
-        conn,
-        db_user,
-        all_users,
+      conn,
+      db_user,
+      all_users,
     )
 
     if group_members is None:
@@ -350,10 +449,15 @@ def create_match(
       )
 
     all_participants = [db_user] + group_members
-    participant_ids = [m["id"] for m in all_participants]
 
-    # Generate group conversation topics
-    conversation_topics = generate_conversation_topics(db_user, group_members[0])
+    participant_ids = [participant["id"] for participant in all_participants]
+
+    recommended_time = get_recommended_time_for_group(
+      participant_ids,
+      conn,
+    )
+
+    conversation_topics = generate_group_conversation_topics(all_participants)
 
     match_id = save_match(
       conn,
@@ -362,13 +466,13 @@ def create_match(
       conversation_topics,
     )
 
-    # Dispatch notifications to each group member
     for member in all_participants:
-      other_partners = [p for p in all_participants if p["id"] != member["id"]]
+      other_members = [participant for participant in all_participants if participant["id"] != member["id"]]
+
       send_slack_match_notification(
         member["slack_user_id"],
-        other_partners,
-        None,
+        other_members,
+        recommended_time,
         conversation_topics,
         is_group=True,
       )
@@ -377,11 +481,28 @@ def create_match(
       "id": match_id,
       "match_type": "group",
       "participant_ids": participant_ids,
+      "recommended_time": recommended_time,
       "conversation_topics": conversation_topics,
+      "participants": [
+        {
+          "id": participant["id"],
+          "first_name": participant["first_name"],
+          "last_name": participant["last_name"],
+          "email": participant["email"],
+          "avatar_url": participant["avatar_url"],
+          "role_title": participant["role_title"],
+          "department": participant["department"],
+        }
+        for participant in group_members
+      ],
     }
 
   except HTTPException:
     raise
+
   except Exception as e:
     traceback.print_exc()
-    raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(
+      status_code=500,
+      detail=str(e),
+    )

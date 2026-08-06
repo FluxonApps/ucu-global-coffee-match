@@ -117,6 +117,132 @@ def get_recommended_time_between_users(user_id: int, colleague_id: int, conn: ps
   return slots[0] if slots else None
 
 
+def get_recommended_time_for_group(
+  participant_ids: list[int],
+  conn: psycopg.Connection,
+) -> dict | None:
+  """
+  Finds the earliest meeting slot that works for every participant.
+  Takes into account:
+  - manual availability
+  - time zones
+  - Google Calendar busy events
+  """
+
+  if not participant_ids:
+    return None
+
+  # -------------------------
+  # Load timezones
+  # -------------------------
+  rows = conn.execute(
+    """
+        SELECT id, timezone
+        FROM users
+        WHERE id = ANY(%s)
+        """,
+    (participant_ids,),
+  ).fetchall()
+
+  timezones = {row["id"]: row["timezone"] for row in rows}
+
+  if len(timezones) != len(participant_ids):
+    return None
+
+  # -------------------------
+  # Manual availability
+  # -------------------------
+  availability_rows = conn.execute(
+    """
+        SELECT
+            user_id,
+            day_of_week,
+            hour_slot
+        FROM user_availability
+        WHERE user_id = ANY(%s)
+          AND available = TRUE
+        """,
+    (participant_ids,),
+  ).fetchall()
+
+  # -------------------------
+  # Google Calendar busy events
+  # -------------------------
+  busy_rows = conn.execute(
+    """
+        SELECT
+            user_id,
+            starts_at,
+            ends_at
+        FROM google_calendar_busy_slots
+        WHERE user_id = ANY(%s)
+          AND ends_at > now()
+        """,
+    (participant_ids,),
+  ).fetchall()
+
+  busy = {user_id: [] for user_id in participant_ids}
+
+  for row in busy_rows:
+    busy[row["user_id"]].append((row["starts_at"], row["ends_at"]))
+
+  # -------------------------
+  # Convert availability to UTC
+  # -------------------------
+  user_slots = {user_id: set() for user_id in participant_ids}
+
+  for slot in availability_rows:
+    interval = local_slot_to_utc(
+      slot["day_of_week"],
+      slot["hour_slot"],
+      timezones[slot["user_id"]],
+    )
+
+    if overlaps_busy_interval(
+      interval[0],
+      interval[1],
+      busy[slot["user_id"]],
+    ):
+      continue
+
+    user_slots[slot["user_id"]].add(interval)
+
+  # Someone has no free slots
+  if any(len(slots) == 0 for slots in user_slots.values()):
+    return None
+
+  # -------------------------
+  # Find common UTC interval
+  # -------------------------
+  common_slots = set.intersection(*user_slots.values())
+
+  if not common_slots:
+    return None
+
+  start, end = sorted(common_slots)[0]
+
+  # -------------------------
+  # Format output
+  # -------------------------
+  return {
+    "utc": f"{DAY_NAMES[start.weekday()]} {start:%H:%M}-{end:%H:%M} UTC",
+    "utc_iso": start.isoformat(),
+    "participants": [
+      {
+        "user_id": user_id,
+        "timezone": timezones[user_id] or "UTC",
+        "display": format_local_range(
+          start,
+          end,
+          timezones[user_id],
+        ),
+      }
+      for user_id in participant_ids
+    ],
+    "duration_minutes": int((end - start).total_seconds() // 60),
+  }
+
+
 @router.get("/common/{colleague_id}")
 def find_common_availability(colleague_id: int, user: CurrentUser, conn: psycopg.Connection = Depends(get_db)):
   if not conn.execute("SELECT 1 FROM users WHERE id = %s", (colleague_id,)).fetchone():

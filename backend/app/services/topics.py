@@ -24,6 +24,29 @@ Respond with ONLY a JSON array of strings, no other text, no markdown formatting
 Example: ["What's the most interesting thing you've built with Python recently?", "..."]
 """
 
+GROUP_SYSTEM_PROMPT = """
+You are an assistant for a corporate coffee chat application.
+
+A group of colleagues has just been matched for a coffee chat.
+
+Generate 3 to 5 engaging conversation starters that the ENTIRE GROUP can discuss.
+
+Requirements:
+- Include topics based on common interests whenever possible.
+- If members have different interests, create questions that connect them.
+- Questions should encourage everyone to participate.
+- Keep each topic to one sentence.
+- Write in English.
+- Return ONLY a JSON array of strings.
+
+Example:
+[
+  "Which technology has excited everyone the most recently?",
+  "If each of you could recommend one book or podcast, what would it be?",
+  "What's one skill you've learned recently that surprised you?"
+]
+"""
+
 
 def _get_genai_client() -> genai.Client | None:
   creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or getattr(settings, "google_application_credentials", None)
@@ -76,13 +99,76 @@ Suggest 3 to 5 conversation topics for their coffee chat."""
         "response_mime_type": "application/json",
       },
     )
-    topics = json.loads(response.text)
+    topics = json.loads(response.text or "[]")
     if isinstance(topics, list) and topics:
       return [str(topic) for topic in topics][:5]
     return _fallback_topics()
   except Exception as exc:  # keep matching flow working even if AI call fails
     logger.error(f"[topics] Failed to generate conversation topics: {exc}")
     return _fallback_topics()
+
+
+def _fallback_group_topics() -> list[str]:
+  return [
+    "What's something interesting you've learned recently?",
+    "Which technology or tool has improved your work the most?",
+    "If you could instantly master one new skill, what would it be?",
+    "What's the best piece of career advice you've received?",
+    "What hobby outside of work would you recommend to everyone?",
+  ]
+
+
+def generate_group_conversation_topics(
+  participants: list[dict],
+) -> list[str]:
+  """
+  Generate conversation starters for an entire coffee chat group.
+  """
+
+  client = _get_genai_client()
+
+  if not client:
+    return _fallback_group_topics()
+
+  participant_descriptions = []
+
+  for participant in participants:
+    participant_descriptions.append(
+      f"""
+Participant:
+Name: {participant.get("first_name", "Unknown")}
+Role: {participant.get("role_title") or "Unknown"}
+Department: {participant.get("department") or "Unknown"}
+Interests: {_format_interests(participant)}
+Bio: {participant.get("bio") or ""}
+"""
+    )
+
+  prompt = (
+    "The following colleagues have been matched into one coffee chat group.\n\n"
+    + "\n".join(participant_descriptions)
+    + "\n\nGenerate 3 to 5 conversation starters for the whole group."
+  )
+
+  try:
+    response = client.models.generate_content(
+      model="gemini-2.5-flash",
+      contents=prompt,
+      config={
+        "system_instruction": GROUP_SYSTEM_PROMPT,
+        "response_mime_type": "application/json",
+      },
+    )
+
+    topics = json.loads(response.text or "[]")
+
+    if isinstance(topics, list) and topics:
+      return [str(topic) for topic in topics][:5]
+
+  except Exception as exc:
+    logger.error(f"[topics] Failed to generate group conversation topics: {exc}")
+
+  return _fallback_group_topics()
 
 
 def _format_interests(user: dict) -> str:

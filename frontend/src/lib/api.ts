@@ -22,7 +22,17 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body?.detail ?? 'Request failed');
+    const detail = body?.detail;
+
+    let message = 'Request failed';
+
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = detail.map((e) => e.msg ?? JSON.stringify(e)).join(', ');
+    }
+
+    throw new ApiError(res.status, message);
   }
 
   if (res.status === 204) {

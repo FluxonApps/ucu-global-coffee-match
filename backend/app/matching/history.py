@@ -20,32 +20,27 @@ def get_past_matches(conn: psycopg.Connection) -> set[tuple[int, int]]:
   return past_pairs
 
 
-def save_match(
-  conn: psycopg.Connection,
-  participant_ids: list[int],
-  match_type: str = "one_to_one",
-  conversation_topics: list[str] | None = None,
-) -> int:
-  """Створює запис матчу та зберігає всіх його учасників."""
-  with conn.cursor() as cur:
-    cur.execute(
-      """
-            INSERT INTO matches (match_type, conversation_topics, matched_at)
-            VALUES (%s, %s, NOW())
-            RETURNING id;
+def save_match(conn, participant_ids, match_type, conversation_topics):
+  match = conn.execute(
+    """
+        INSERT INTO matches (match_type, conversation_topics)
+        VALUES (%s, %s)
+        RETURNING id
         """,
-      (match_type, conversation_topics or []),
-    )
-    match_id = cur.fetchone()["id"]
+    (match_type, conversation_topics),
+  ).fetchone()
 
-    for user_id in participant_ids:
-      cur.execute(
-        """
-                INSERT INTO match_participants (match_id, user_id)
-                VALUES (%s, %s);
+  match_id = match["id"]
+
+  for participant_id in participant_ids:
+    conn.execute(
+      """
+            INSERT INTO match_participants (match_id, user_id)
+            VALUES (%s, %s)
             """,
-        (match_id, user_id),
-      )
+      (match_id, participant_id),
+    )
 
   conn.commit()
+
   return match_id

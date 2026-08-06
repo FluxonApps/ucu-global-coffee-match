@@ -32,7 +32,9 @@ const MatchesPage = () => {
       });
   }, []);
 
-  const handleFindMatch = async (matchType: 'individual' | 'group') => {
+  const handleFindMatch = async (
+    matchType: 'one_to_one' | 'group'
+  ) => {
     if (!user) return;
 
     setIsMatching(true);
@@ -40,6 +42,9 @@ const MatchesPage = () => {
 
     try {
       const result = await createMatch(matchType);
+
+      console.log('MATCH RESULT:', result);
+
       setLatestMatch(result);
 
       const updatedHistory = await getMatchHistory();
@@ -59,7 +64,12 @@ const MatchesPage = () => {
 
           {isReady && (
             <div className="flex gap-3">
-              <Btn variant="primary" size="md" onClick={() => handleFindMatch('individual')} disabled={isMatching}>
+              <Btn
+                variant="primary"
+                size="md"
+                onClick={() => handleFindMatch('one_to_one')}
+                disabled={isMatching}
+              >
                 <Coffee size={14} />
                 {isMatching ? 'Finding...' : 'Individual Coffee'}
               </Btn>
