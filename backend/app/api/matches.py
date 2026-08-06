@@ -197,9 +197,9 @@ def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_
 
 @router.post("/create")
 def create_match(
-  body: MatchCreateRequest,
   user: CurrentUser,
   conn: psycopg.Connection = Depends(get_db),
+  body: MatchCreateRequest = MatchCreateRequest(),
 ):
   try:
     db_user = conn.execute(
@@ -274,6 +274,18 @@ def create_match(
         "participant_ids": [db_user["id"], matched_user["id"]],
         "recommended_time": recommended_time,
         "conversation_topics": conversation_topics,
+        "match": {
+          "id": matched_user["id"],
+          "first_name": matched_user["first_name"],
+          "last_name": matched_user["last_name"],
+          "email": matched_user["email"],
+          "timezone": matched_user["timezone"],
+          "avatar_url": matched_user.get("avatar_url"),
+        },
+        "match_record": {
+          "user1_id": db_user["id"],
+          "user2_id": matched_user["id"],
+        },
       }
 
     # Груповий match
