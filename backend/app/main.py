@@ -42,7 +42,6 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(matches.router)
 app.include_router(availability.router)
-app.include_router(google_calendar.router)
 
 
 # Обробник для кореневого шляху (приймає і GET, і HEAD)
