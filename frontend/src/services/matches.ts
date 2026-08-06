@@ -53,8 +53,13 @@ export type CreateMatchResponse = {
   conversation_topics: string[];
 };
 
-export async function createMatch(): Promise<CreateMatchResponse> {
-  return apiFetch<CreateMatchResponse>('/matches/create', { method: 'POST' });
+export async function createMatch(matchType: 'individual' | 'group'): Promise<CreateMatchResponse> {
+  return apiFetch<CreateMatchResponse>('/matches/create', {
+    method: 'POST',
+    body: JSON.stringify({
+      match_type: matchType,
+    }),
+  });
 }
 
 export async function getMatches(): Promise<Match[]> {

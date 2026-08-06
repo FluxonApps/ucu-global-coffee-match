@@ -2,16 +2,15 @@ import { ArrowRight, Calendar, Clock, ExternalLink, Users, Coffee } from 'lucide
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
+import MatchTopicsCard from '../components/MatchTopicsCard.tsx';
 import Avatar from '../components/ui/Avatar.tsx';
 import Btn from '../components/ui/Btn.tsx';
 import Card from '../components/ui/Card.tsx';
+import { useAuth } from '../context/useAuth.ts';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
+import { ApiError } from '../lib/api.ts';
 import { createMatch, getMatchHistory } from '../services/matches.ts';
 import type { CreateMatchResponse, MatchHistoryEntry } from '../services/matches.ts';
-import MatchTopicsCard from '../components/MatchTopicsCard.tsx';
-
-import { useAuth } from '../context/useAuth.ts';
-import { ApiError } from '../lib/api.ts';
 
 const MatchesPage = () => {
   const { details } = useProfileDetails();
@@ -28,25 +27,20 @@ const MatchesPage = () => {
     void getMatchHistory().then(setHistory);
   }, []);
 
-  const handleFindMatch = async () => {
+  const handleFindMatch = async (matchType: 'individual' | 'group') => {
     if (!user) return;
 
     setIsMatching(true);
     setMatchError('');
 
     try {
-      const result = await createMatch();
+      const result = await createMatch(matchType);
       setLatestMatch(result);
 
-      // Reload the list so the newly created match appears.
       const updatedHistory = await getMatchHistory();
       setHistory(updatedHistory);
     } catch (error) {
-      setMatchError(
-        error instanceof ApiError
-          ? error.message
-          : 'Could not create a match. Please try again.',
-      );
+      setMatchError(error instanceof ApiError ? error.message : 'Could not create a match. Please try again.');
     } finally {
       setIsMatching(false);
     }
@@ -59,15 +53,17 @@ const MatchesPage = () => {
           <h1 className="text-2xl font-medium font-display">Matches</h1>
 
           {isReady && (
-            <Btn
-              variant="primary"
-              size="md"
-              onClick={handleFindMatch}
-              disabled={isMatching}
-            >
-              <Coffee size={14} />
-              {isMatching ? 'Finding match...' : 'Find a coffee match'}
-            </Btn>
+            <div className="flex gap-3">
+              <Btn variant="primary" size="md" onClick={() => handleFindMatch('individual')} disabled={isMatching}>
+                <Coffee size={14} />
+                {isMatching ? 'Finding...' : 'Individual Coffee'}
+              </Btn>
+
+              <Btn variant="secondary" size="md" onClick={() => handleFindMatch('group')} disabled={isMatching}>
+                <Users size={14} />
+                {isMatching ? 'Finding...' : 'Group Coffee'}
+              </Btn>
+            </div>
           )}
         </div>
 
@@ -139,15 +135,10 @@ const MatchesPage = () => {
 
                         {match.conversation_topics && match.conversation_topics.length > 0 && (
                           <div className="mt-1">
-                            <p className="text-xs font-semibold text-foreground mb-1">
-                              Conversation topic suggestions
-                            </p>
+                            <p className="text-xs font-semibold text-foreground mb-1">Conversation topic suggestions</p>
                             <ul className="space-y-1">
                               {match.conversation_topics.map((topic, index) => (
-                                <li
-                                  key={index}
-                                  className="text-xs text-muted-foreground leading-relaxed"
-                                >
+                                <li key={index} className="text-xs text-muted-foreground leading-relaxed">
                                   • {topic}
                                 </li>
                               ))}
@@ -165,9 +156,7 @@ const MatchesPage = () => {
                             <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
                             <span>
                               <span className="block">Your time: {match.recommended_time.user_local.display}</span>
-                              <span className="block">
-                                Their time: {match.recommended_time.match_local.display}
-                              </span>
+                              <span className="block">Their time: {match.recommended_time.match_local.display}</span>
                             </span>
                           </div>
                         ) : (

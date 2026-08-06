@@ -21,9 +21,7 @@ slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN")) if os.environ.
 
 
 class MatchCreateRequest(BaseModel):
-  match_type: Literal["one_to_one", "group"] = "one_to_one"
-  group_size: int | None = Field(default=None, ge=3, le=10)
-
+    match_type: Literal["one_to_one", "group"] = "one_to_one"
 
 def send_slack_match_notification(
   recipient_slack_id: str,
@@ -124,7 +122,7 @@ def find_one_to_one_match(conn, user, all_users):
   return best_user
 
 
-def find_group_match(conn, user, all_users, group_size: int):
+def find_group_match(conn, user, all_users):
   past_pairs = get_past_matches(conn)
   candidates = []
 
@@ -138,11 +136,19 @@ def find_group_match(conn, user, all_users, group_size: int):
   # Сортуємо кандидатів за найкращим балом
   candidates.sort(key=lambda x: x[0], reverse=True)
 
-  needed_count = group_size - 1
-  if len(candidates) < needed_count:
-    return None
+  MIN_GROUP_SIZE = 3
+  MAX_GROUP_SIZE = 7
 
-  selected_group = [item[1] for item in candidates[:needed_count]]
+  selected_group = []
+
+  for _, candidate in candidates:
+      if len(selected_group) >= MAX_GROUP_SIZE - 1:
+          break
+
+      selected_group.append(candidate)
+
+  if len(selected_group) < MIN_GROUP_SIZE - 1:
+      return None
   return selected_group
 
 
@@ -288,24 +294,16 @@ def create_match(
         },
       }
 
-    # Груповий match
-    if body.group_size is None:
-      raise HTTPException(
-        status_code=422,
-        detail="group_size is required for a group match",
-      )
-
     group_members = find_group_match(
-      conn,
-      db_user,
-      all_users,
-      body.group_size,
+        conn,
+        db_user,
+        all_users,
     )
 
     if group_members is None:
       raise HTTPException(
         status_code=409,
-        detail=(f"Not enough compatible people for a group of {body.group_size}"),
+        detail="Not enough compatible people for a group.",
       )
 
     all_participants = [db_user] + group_members
