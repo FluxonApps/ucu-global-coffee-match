@@ -2,7 +2,7 @@ import logging
 import os
 import traceback
 from typing import Literal
-print("MATCHES.PY LOADED")
+
 import psycopg
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
@@ -80,7 +80,7 @@ def send_slack_match_notification(
     label = "Partner" if not is_group else "Group member"
 
     user_text = (
-      f"👤 *{label}:* <@{partner['slack_user_id']}> ({name})"
+      f"👤 *{label}:* <@{partner['slack_user_id']}> ({name})\n"
       f"💼 *Role:* {role} | *Department:* {dept}\n"
       f"📝 *Bio:* {bio}\n"
       f"🎯 *Interests:* {interests_str}\n"
@@ -174,16 +174,6 @@ def send_slack_match_notification(
 
 
 def find_one_to_one_match(conn, user, all_users):
-  print("Current user:", user["id"])
-
-  print("Available users:")
-  for u in all_users:
-      print(
-          u["id"],
-          u["first_name"],
-          u["is_available"],
-          u["personal_interests"],
-      )
   past_pairs = get_past_matches(conn)
   best_user = None
   best_score = -1
@@ -337,11 +327,6 @@ def create_match(
   conn: psycopg.Connection = Depends(get_db),
   body: MatchCreateRequest = Body(default_factory=MatchCreateRequest),
 ):
-
-  print("===== CREATE MATCH =====")
-  print("Current user:", user["id"])
-  print("Match type:", body.match_type)
-
   try:
     # ---------------------------------------------------
     # Load current user
@@ -357,20 +342,21 @@ def create_match(
         detail="User not found",
       )
 
-    # if db_user["slack_user_id"] is None:
-    #   raise HTTPException(
-    #     status_code=409,
-    #     detail="Link your Slack account before creating a match",
-    #   )
+    if db_user["slack_user_id"] is None:
+      raise HTTPException(
+        status_code=409,
+        detail="Link your Slack account before creating a match",
+      )
 
     # ---------------------------------------------------
-    # Available users
+    # Available users (must have Slack linked so they can be notified)
     # ---------------------------------------------------
     all_users = conn.execute(
       """
             SELECT *
             FROM users
             WHERE is_available = TRUE
+              AND slack_user_id IS NOT NULL
             """
     ).fetchall()
 

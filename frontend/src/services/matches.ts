@@ -10,18 +10,34 @@ export type MatchParticipant = {
   avatar_url: string;
 };
 
-export type RecommendedTime = {
+// Returned for one_to_one matches (get_recommended_time_between_users).
+export type OneToOneRecommendedTime = {
   utc: string;
+  utc_iso?: string;
   user_local: {
     timezone: string;
     display: string;
   };
-  match_local?: {
+  match_local: {
     timezone: string;
     display: string;
   };
   duration_minutes: number;
 };
+
+// Returned for group matches (get_recommended_time_for_group).
+export type GroupRecommendedTime = {
+  utc: string;
+  utc_iso?: string;
+  participants: {
+    user_id: number;
+    timezone: string;
+    display: string;
+  }[];
+  duration_minutes: number;
+};
+
+export type RecommendedTime = OneToOneRecommendedTime | GroupRecommendedTime;
 
 export type MatchHistoryEntry = {
   id: number;

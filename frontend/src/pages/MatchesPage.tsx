@@ -10,7 +10,42 @@ import { useAuth } from '../context/useAuth.ts';
 import { useProfileDetails } from '../context/useProfileDetails.ts';
 import { ApiError } from '../lib/api.ts';
 import { createMatch, getMatchHistory } from '../services/matches.ts';
-import type { CreateMatchResponse, MatchHistoryEntry } from '../services/matches.ts';
+import type { CreateMatchResponse, MatchHistoryEntry, RecommendedTime } from '../services/matches.ts';
+
+/** Renders the recommended meeting time whether it's a 1:1 or group shape. */
+const RecommendedTimeDisplay = ({ time }: { time: RecommendedTime | null }) => {
+  if (!time) {
+    return <span className="text-xs text-muted-foreground">No common available hour</span>;
+  }
+
+  // One-to-one shape has `user_local` / `match_local`.
+  if ('user_local' in time) {
+    return (
+      <div className="flex max-w-56 items-start gap-1 text-right text-xs text-muted-foreground">
+        <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
+        <span>
+          <span className="block">Your time: {time.user_local.display}</span>
+          <span className="block">Their time: {time.match_local.display}</span>
+        </span>
+      </div>
+    );
+  }
+
+  // Group shape has a `participants` array.
+  return (
+    <div className="flex max-w-56 items-start gap-1 text-right text-xs text-muted-foreground">
+      <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
+      <span>
+        <span className="block font-mono">{time.utc}</span>
+        {time.participants.map((p) => (
+          <span key={p.user_id} className="block">
+            {p.display} ({p.timezone})
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+};
 
 const MatchesPage = () => {
   const { details } = useProfileDetails();
@@ -40,11 +75,9 @@ const MatchesPage = () => {
 
     try {
       const result = await createMatch(matchType);
-
-      console.log(result);
-
       setLatestMatch(result);
 
+      // Reload the list so the newly created match appears.
       const updatedHistory = await getMatchHistory();
       setHistory(updatedHistory);
     } catch (error) {
@@ -79,7 +112,7 @@ const MatchesPage = () => {
 
         {latestMatch && latestMatch.participants.length > 0 && (
           <MatchTopicsCard
-            colleague={latestMatch.participants[0]}
+            colleagues={latestMatch.participants}
             topics={latestMatch.conversation_topics}
             onDismiss={() => setLatestMatch(null)}
           />
@@ -124,26 +157,43 @@ const MatchesPage = () => {
                     timeStyle: 'short',
                   }).format(new Date(match.matched_at));
 
-                  const participant = match.participants[0];
+                  if (match.participants.length === 0) return null;
 
-                  if (!participant) return null;
+                  const names = match.participants.map((p) => `${p.first_name} ${p.last_name}`.trim()).join(', ');
 
-                  const fullName = `${participant.first_name} ${participant.last_name}`;
+                  // Link/avatar target: for 1:1 send them to that person's profile;
+                  // for groups there's no single profile to deep-link to.
+                  const primary = match.participants[0];
 
                   return (
                     <li key={match.id} className="flex items-start gap-3 px-5 py-4">
-                      <Link to={`/profile/${participant.id}`}>
-                        <Avatar src={participant.avatar_url} name={fullName} size={44} />
-                      </Link>
+                      <div className="flex -space-x-2 flex-shrink-0 pt-1">
+                        {match.participants.map((p) => (
+                          <Link key={p.id} to={`/profile/${p.id}`} className="rounded-full ring-2 ring-background">
+                            <Avatar src={p.avatar_url} name={`${p.first_name} ${p.last_name}`} size={44} />
+                          </Link>
+                        ))}
+                      </div>
 
                       <div className="min-w-0 flex-1">
-                        <Link
-                          to={`/profile/${participant.id}`}
-                          className="font-medium text-foreground hover:text-primary transition-colors"
-                        >
-                          {fullName}
-                        </Link>
-                        <p className="truncate text-sm text-muted-foreground mb-2">{participant.email}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            to={`/profile/${primary.id}`}
+                            className="font-medium text-foreground hover:text-primary transition-colors"
+                          >
+                            {names}
+                          </Link>
+                          {match.match_type === 'group' && (
+                            <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              Group of {match.participants.length + 1}
+                            </span>
+                          )}
+                        </div>
+                        <p className="truncate text-sm text-muted-foreground mb-2">
+                          {match.match_type === 'one_to_one'
+                            ? primary.email
+                            : `${match.participants.length + 1} coffee chat participants`}
+                        </p>
 
                         {match.conversation_topics && match.conversation_topics.length > 0 && (
                           <div className="mt-1">
@@ -163,18 +213,8 @@ const MatchesPage = () => {
                         <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono whitespace-nowrap">
                           <Clock size={11} /> {matchedAt}
                         </span>
-                        {match.recommended_time ? (
-                          <div className="flex max-w-56 items-start gap-1 text-right text-xs text-muted-foreground">
-                            <Calendar size={11} className="mt-0.5 flex-shrink-0 text-primary" />
-                            <span>
-                              <span className="block">Your time: {match.recommended_time.user_local.display}</span>
-                              <span className="block">Their time: {match.recommended_time.match_local.display}</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">No common available hour</span>
-                        )}
-                        <Link to={`/profile/${participant.id}`}>
+                        <RecommendedTimeDisplay time={match.recommended_time} />
+                        <Link to={`/profile/${primary.id}`}>
                           <Btn variant="outline" size="sm">
                             <ExternalLink size={12} /> View Profile
                           </Btn>
