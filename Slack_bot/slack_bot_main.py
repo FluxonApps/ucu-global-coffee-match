@@ -477,7 +477,6 @@ def update_home_tab(client, event, logger):
                             "text": (
                                 "*📌 Available commands:*\n\n"
                                 "• `/login CODE` — Link account from the website\n"
-                                "• `/smart-match` — Find an ideal coffee partner\n"
                                 "• `/random_user` — Random colleague selection\n"
                                 "• `/mute` / `/unmute` — Pause or resume participation\n"
                                 "• `/help` — Help"
