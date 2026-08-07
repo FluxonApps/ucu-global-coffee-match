@@ -24,7 +24,7 @@ INSERT INTO users (
   'Design',
   'Europe/Kyiv',
   'Passionate about UI/UX and web technologies. Always open for a coffee chat!',
-  ARRAY['Coffee', 'Photography', 'Reading', 'Music'],
+  ARRAY['Running', 'Cooking', 'Basketball'],
   ARRAY['Figma', 'UX Research', 'Prototyping', 'Design Systems'],
   ARRAY['English', 'Ukrainian']
 ),
@@ -39,7 +39,37 @@ INSERT INTO users (
   'Engineering',
   'Europe/Kyiv',
   'Love building backends and exploring new frameworks.',
-  ARRAY['Coffee', 'Gaming', 'Open Source'],
+  ARRAY['Running', 'Cooking'],
+  ARRAY['Python', 'FastAPI', 'PostgreSQL', 'Docker'],
+  ARRAY['English', 'Ukrainian']
+),
+(
+  'aX9kL2mP8qR4vW1z',
+  'Ale',
+  'Chen',
+  'alex@company.com',
+  '$2b$12$AZS7YHYJ5GXicvG6/TuMxun30kRIDDJJTKQ651NrQjO/ClFSXvJQm',
+  '/static/avatars/default.png',
+  'Senior Product Designer',
+  'Design',
+  'Europe/Kyiv',
+  'Passionate about UI/UX and web technologies. Always open for a coffee chat!',
+  ARRAY['Running', 'Cooking', 'Basketball'],
+  ARRAY['Figma', 'UX Research', 'Prototyping', 'Design Systems'],
+  ARRAY['English', 'Ukrainian']
+),
+(
+  'bY0mL3nQ9sS5wX2a',
+  'Matfhe',
+  'Ov',
+  'matfheiwovubdjs@gmail.com',
+  '$2b$12$AZS7YHYJ5GXicvG6/TuMxun30kRIDDJJTKQ651NrQjO/ClFSXvJQm',
+  '/static/avatars/default.png',
+  'Software Engineer',
+  'Engineering',
+  'Europe/Kyiv',
+  'Love building backends and exploring new frameworks.',
+  ARRAY['Running', 'Cooking', 'Basketball'],
   ARRAY['Python', 'FastAPI', 'PostgreSQL', 'Docker'],
   ARRAY['English', 'Ukrainian']
 )

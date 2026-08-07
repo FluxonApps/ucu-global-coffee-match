@@ -1,7 +1,6 @@
 import { apiFetch, ApiError } from '../lib/api.ts';
 import type { Colleague, Match } from '../types/coffeeMatch.ts';
 
-
 export type MatchParticipant = {
   id: number;
   email: string;
@@ -10,7 +9,6 @@ export type MatchParticipant = {
   timezone: string | null;
   avatar_url: string;
 };
-
 
 export type RecommendedTime = {
   utc: string;
@@ -25,46 +23,36 @@ export type RecommendedTime = {
   duration_minutes: number;
 };
 
-
 export type MatchHistoryEntry = {
   id: number;
   matched_at: string;
 
-  match_type: 'individual' | 'group';
+  match_type: 'one_to_one' | 'group';
 
   recommended_time: RecommendedTime | null;
 
   conversation_topics: string[];
 
-  // Individual coffee
-  colleague?: MatchParticipant;
-
-  // Group coffee
-  participants?: MatchParticipant[];
+  participants: MatchParticipant[];
 };
-
 
 export async function getMatchHistory(): Promise<MatchHistoryEntry[]> {
   return apiFetch<MatchHistoryEntry[]>('/matches/history');
 }
 
-
 export type CreateMatchResponse = {
-    id: number;
+  id: number;
 
-    match_type: 'one_to_one' | 'group';
+  match_type: 'one_to_one' | 'group';
 
-    participants: MatchParticipant[];
+  participants: MatchParticipant[];
 
-    recommended_time: RecommendedTime | null;
+  recommended_time: RecommendedTime | null;
 
-    conversation_topics: string[];
+  conversation_topics: string[];
 };
 
-
-export async function createMatch(
-  matchType: 'one_to_one' | 'group'
-): Promise<CreateMatchResponse> {
+export async function createMatch(matchType: 'one_to_one' | 'group'): Promise<CreateMatchResponse> {
   return apiFetch<CreateMatchResponse>('/matches/create', {
     method: 'POST',
     body: JSON.stringify({
@@ -73,11 +61,9 @@ export async function createMatch(
   });
 }
 
-
 export async function getMatches(): Promise<Match[]> {
   return apiFetch<Match[]>('/matches');
 }
-
 
 type UserProfileResponse = {
   id: number;
@@ -94,7 +80,6 @@ type UserProfileResponse = {
   skills: string[];
   languages: string[];
 };
-
 
 const toColleague = (row: UserProfileResponse): Colleague => ({
   id: String(row.id),
@@ -114,12 +99,10 @@ const toColleague = (row: UserProfileResponse): Colleague => ({
   frequency: '',
 });
 
-
 export async function getAllColleagues(): Promise<Colleague[]> {
   const rows = await apiFetch<UserProfileResponse[]>('/users');
   return rows.map(toColleague);
 }
-
 
 export async function getColleague(id: string): Promise<Colleague | undefined> {
   try {
@@ -134,27 +117,20 @@ export async function getColleague(id: string): Promise<Colleague | undefined> {
   }
 }
 
-
 export interface FeedbackAnswers {
   matchId: string;
   ratings: Record<string, number>;
   comment: string;
 }
 
-
-export async function submitFeedback(
-  answers: FeedbackAnswers
-): Promise<void> {
+export async function submitFeedback(answers: FeedbackAnswers): Promise<void> {
   // TODO(backend): POST /feedback
   console.info('[mock] feedback submitted (not persisted):', answers);
 }
-
 
 /** The one match still awaiting feedback, used by the Feedback page. */
 export async function getMatchNeedingFeedback(): Promise<Match | undefined> {
   const matches = await getMatches();
 
-  return matches.find(
-    (m) => m.status === 'previous' && !m.feedbackGiven
-  );
+  return matches.find((m) => m.status === 'previous' && !m.feedbackGiven);
 }

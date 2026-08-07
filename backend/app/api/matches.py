@@ -2,7 +2,7 @@ import logging
 import os
 import traceback
 from typing import Literal
-
+print("MATCHES.PY LOADED")
 import psycopg
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
@@ -174,6 +174,16 @@ def send_slack_match_notification(
 
 
 def find_one_to_one_match(conn, user, all_users):
+  print("Current user:", user["id"])
+
+  print("Available users:")
+  for u in all_users:
+      print(
+          u["id"],
+          u["first_name"],
+          u["is_available"],
+          u["personal_interests"],
+      )
   past_pairs = get_past_matches(conn)
   best_user = None
   best_score = -1
@@ -250,6 +260,7 @@ def find_group_match(conn, user, all_users):
 @router.get("/history")
 def get_match_history(user: CurrentUser, conn: psycopg.Connection = Depends(get_db)):
   """Returns match history for the current authenticated user."""
+
   rows = conn.execute(
     """
       SELECT
@@ -326,6 +337,11 @@ def create_match(
   conn: psycopg.Connection = Depends(get_db),
   body: MatchCreateRequest = Body(default_factory=MatchCreateRequest),
 ):
+
+  print("===== CREATE MATCH =====")
+  print("Current user:", user["id"])
+  print("Match type:", body.match_type)
+
   try:
     # ---------------------------------------------------
     # Load current user
@@ -341,11 +357,11 @@ def create_match(
         detail="User not found",
       )
 
-    if db_user["slack_user_id"] is None:
-      raise HTTPException(
-        status_code=409,
-        detail="Link your Slack account before creating a match",
-      )
+    # if db_user["slack_user_id"] is None:
+    #   raise HTTPException(
+    #     status_code=409,
+    #     detail="Link your Slack account before creating a match",
+    #   )
 
     # ---------------------------------------------------
     # Available users
@@ -354,8 +370,7 @@ def create_match(
       """
             SELECT *
             FROM users
-            WHERE slack_user_id IS NOT NULL
-              AND is_available = TRUE
+            WHERE is_available = TRUE
             """
     ).fetchall()
 

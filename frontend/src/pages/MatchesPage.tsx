@@ -32,9 +32,7 @@ const MatchesPage = () => {
       });
   }, []);
 
-  const handleFindMatch = async (
-    matchType: 'one_to_one' | 'group'
-  ) => {
+  const handleFindMatch = async (matchType: 'one_to_one' | 'group') => {
     if (!user) return;
 
     setIsMatching(true);
@@ -43,7 +41,7 @@ const MatchesPage = () => {
     try {
       const result = await createMatch(matchType);
 
-      console.log('MATCH RESULT:', result);
+      console.log(result);
 
       setLatestMatch(result);
 
@@ -64,12 +62,7 @@ const MatchesPage = () => {
 
           {isReady && (
             <div className="flex gap-3">
-              <Btn
-                variant="primary"
-                size="md"
-                onClick={() => handleFindMatch('one_to_one')}
-                disabled={isMatching}
-              >
+              <Btn variant="primary" size="md" onClick={() => handleFindMatch('one_to_one')} disabled={isMatching}>
                 <Coffee size={14} />
                 {isMatching ? 'Finding...' : 'Individual Coffee'}
               </Btn>
@@ -84,9 +77,9 @@ const MatchesPage = () => {
 
         {matchError && <p className="mb-4 text-sm text-destructive">{matchError}</p>}
 
-        {latestMatch && (
+        {latestMatch && latestMatch.participants.length > 0 && (
           <MatchTopicsCard
-            colleague={latestMatch.match}
+            colleague={latestMatch.participants[0]}
             topics={latestMatch.conversation_topics}
             onDismiss={() => setLatestMatch(null)}
           />
@@ -131,22 +124,26 @@ const MatchesPage = () => {
                     timeStyle: 'short',
                   }).format(new Date(match.matched_at));
 
-                  const fullName = `${match.colleague.first_name} ${match.colleague.last_name}`;
+                  const participant = match.participants[0];
+
+                  if (!participant) return null;
+
+                  const fullName = `${participant.first_name} ${participant.last_name}`;
 
                   return (
                     <li key={match.id} className="flex items-start gap-3 px-5 py-4">
-                      <Link to={`/profile/${match.colleague.id}`} className="flex-shrink-0 pt-1">
-                        <Avatar src={match.colleague.avatar_url} name={fullName} size={44} />
+                      <Link to={`/profile/${participant.id}`}>
+                        <Avatar src={participant.avatar_url} name={fullName} size={44} />
                       </Link>
 
                       <div className="min-w-0 flex-1">
                         <Link
-                          to={`/profile/${match.colleague.id}`}
+                          to={`/profile/${participant.id}`}
                           className="font-medium text-foreground hover:text-primary transition-colors"
                         >
                           {fullName}
                         </Link>
-                        <p className="truncate text-sm text-muted-foreground mb-2">{match.colleague.email}</p>
+                        <p className="truncate text-sm text-muted-foreground mb-2">{participant.email}</p>
 
                         {match.conversation_topics && match.conversation_topics.length > 0 && (
                           <div className="mt-1">
@@ -177,7 +174,7 @@ const MatchesPage = () => {
                         ) : (
                           <span className="text-xs text-muted-foreground">No common available hour</span>
                         )}
-                        <Link to={`/profile/${match.colleague.id}`}>
+                        <Link to={`/profile/${participant.id}`}>
                           <Btn variant="outline" size="sm">
                             <ExternalLink size={12} /> View Profile
                           </Btn>
